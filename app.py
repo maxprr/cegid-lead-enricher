@@ -1545,7 +1545,7 @@ elif "📊 Analyse Business" in page:
     if df_ana is not None and not df_ana.empty:
         # KPIs globaux
         st.markdown('<div class="section-title">Marche adressable — vue d\'ensemble</div>', unsafe_allow_html=True)
-        nb_etab_series = pd.to_numeric(df_ana.get("Nb Etablissements", pd.Series(dtype=float)), errors="coerce")
+        nb_etab_series = pd.to_numeric(df_ana["Nb Etablissements"] if "Nb Etablissements" in df_ana.columns else pd.Series(dtype=float), errors="coerce")
         c1,c2,c3,c4,c5 = st.columns(5)
         with c1: st.markdown('<div class="metric-card"><div class="label">Prospects total</div><div class="value">{:,}</div></div>'.format(len(df_ana)), unsafe_allow_html=True)
         with c2: st.markdown('<div class="metric-card"><div class="label">Total etablissements</div><div class="value">{:,}</div></div>'.format(int(nb_etab_series.sum())), unsafe_allow_html=True)
@@ -1575,7 +1575,7 @@ elif "📊 Analyse Business" in page:
 
         # Analyse geographique
         st.markdown('<div class="section-title">Repartition geographique</div>', unsafe_allow_html=True)
-        reg_col = "Region" if "Region" in df_ana.columns else None
+        reg_col = "Region" if "Region" in df_ana.columns else ("Billing Country" if "Billing Country" in df_ana.columns else None)
         if reg_col:
             geo = (df_ana[df_ana[reg_col].notna() & (df_ana[reg_col] != "")]
                    .groupby(reg_col)
@@ -1618,24 +1618,25 @@ elif "📊 Analyse Business" in page:
             grade_s.columns = ["Grade","Nb Prospects","Score Moyen","Etab. Moyen"]
             st.dataframe(grade_s, use_container_width=True)
 
-            n_a = (df_ana["Grade"]=="A").sum()
-            n_b = (df_ana["Grade"]=="B").sum()
+            n_a = (df_ana["Grade"]=="A").sum() if "Grade" in df_ana.columns else 0
+            n_b = (df_ana["Grade"]=="B").sum() if "Grade" in df_ana.columns else 0
             top_sect = "N/A"
             top_reg  = "N/A"
-            if n_a > 0:
+            if n_a > 0 and "Grade" in df_ana.columns:
+                df_a = df_ana[df_ana["Grade"]=="A"]
                 if "Industry Label" in df_ana.columns:
-                    vc = df_ana[df_ana["Grade"]=="A"]["Industry Label"].value_counts()
+                    vc = df_a["Industry Label"].value_counts()
                     if len(vc): top_sect = vc.index[0]
-                if reg_col in df_ana.columns:
-                    vc2 = df_ana[df_ana["Grade"]=="A"][reg_col].value_counts()
+                if reg_col and reg_col in df_ana.columns:
+                    vc2 = df_a[reg_col].value_counts()
                     if len(vc2): top_reg = vc2.index[0]
 
-            score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if n_a > 0 else 0
-            etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if n_a > 0 else 0
+            score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if (n_a > 0 and "Score Total" in df_ana.columns) else 0
+            etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if (n_a > 0 and "Nb Etablissements" in df_ana.columns) else 0
 
             # Calculer répartition par produit
             prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
-            seg_m_l_xl = df_ana[df_ana.get("Segment Cegid","") if "Segment Cegid" in df_ana.columns else "Grade"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
+            seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
 
             st.markdown("""
 <div class="info-box">
