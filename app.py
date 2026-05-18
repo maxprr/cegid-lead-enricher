@@ -1524,7 +1524,14 @@ elif "📊 Analyse Business" in page:
         <p>Insights strategiques sur le marche adressable · Mode consultant McKinsey</p>
     </div>""", unsafe_allow_html=True)
 
-    df_ana = st.session_state.df_scored or st.session_state.df_prospects
+    # Priorité : df_scored (scoré) > df_prospects (brut)
+    # Ne pas utiliser "or" avec des DataFrames pandas → ValueError
+    if st.session_state.df_scored is not None:
+        df_ana = st.session_state.df_scored
+    elif st.session_state.df_prospects is not None:
+        df_ana = st.session_state.df_prospects
+    else:
+        df_ana = None
     if df_ana is None:
         up = st.file_uploader("Uploadez votre fichier de prospects (score ou non)", type=["xlsx","xls","csv"])
         if up:
