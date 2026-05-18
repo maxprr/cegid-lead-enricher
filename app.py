@@ -1015,7 +1015,7 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
     # -- Passe 3 : fuzzy leger (nom contenu dans l'autre) ---------------------
     names   = df["Account Name"].str.upper().str.strip().tolist()
     to_drop = set()
-    for i in range(min(len(names), 200)):   # Limiter a 200 pour performance
+    for i in range(min(len(names), 200)):
         if i in to_drop: continue
         for j in range(i+1, min(i+15, len(names))):
             if j in to_drop: continue
@@ -1025,11 +1025,9 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
                 nb_i = df.iloc[i]["Nb Etablissements"] or 0
                 nb_j = df.iloc[j]["Nb Etablissements"] or 0
                 to_drop.add(j if nb_i >= nb_j else i)
-
     if to_drop:
         df = df.drop(index=list(to_drop)).reset_index(drop=True)
 
-    # Trier par nb etablissements et retourner max_results
     df = df.sort_values("Nb Etablissements", ascending=False).reset_index(drop=True)
     return df.head(max_results)
 
@@ -1666,12 +1664,20 @@ elif "Analyse Business" in page:
         # Analyse par secteur
         st.markdown('<div class="section-title">Repartition par secteur retail (NAF)</div>', unsafe_allow_html=True)
         if "Industry Label" in df_ana.columns:
+            _has_etab = "Nb Etablissements" in df_ana.columns
+            _agg_dict = {"nb_prospects": ("Account Name","count")}
+            if _has_etab:
+                df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
+                _agg_dict["moy_etab"] = ("Nb Etablissements","mean")
             sect = (df_ana.groupby("Industry Label")
-                    .agg(nb_prospects=("Account Name","count"),
-                         moy_etab=("Nb Etablissements","mean"))
+                    .agg(**_agg_dict)
                     .sort_values("nb_prospects", ascending=False).head(10).reset_index())
-            sect["moy_etab"] = sect["moy_etab"].round(1)
-            sect.columns = ["Secteur","Nb Prospects","Moy. Etab."]
+            if _has_etab:
+                sect["moy_etab"] = sect["moy_etab"].round(1)
+                sect.columns = ["Secteur","Nb Prospects","Moy. Etab."]
+            else:
+                sect.columns = ["Secteur","Nb Prospects"]
+                sect["Moy. Etab."] = "N/A"
             cs1, cs2 = st.columns([3,2])
             with cs1:
                 st.bar_chart(sect.set_index("Secteur")["Nb Prospects"], color="#003082")
@@ -1687,7 +1693,17 @@ elif "Analyse Business" in page:
                    .groupby(reg_col)
                    .agg(nb=("Account Name","count"), total_etab=("Nb Etablissements","sum"))
                    .sort_values("nb", ascending=False).reset_index())
-            geo.columns = ["Region","Nb Prospects","Total Etab."]
+            geo.columns = ["Region","Nb Prospects"]
+            geo["Total Etab."] = "N/A"
+            if "Nb Etablissements" in df_ana.columns:
+                etab_geo = (df_ana[df_ana[reg_col].notna()]
+                           .groupby(reg_col)["Nb Etablissements"]
+                           .apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
+                           .reset_index())
+                etab_geo.columns = [reg_col, "Total Etab."]
+                geo = geo.merge(etab_geo, on=reg_col, how="left")
+                geo = geo[["Region","Nb Prospects","Total Etab._y"]].rename(
+                    columns={"Total Etab._y":"Total Etab."})
             cg1, cg2 = st.columns([3,2])
             with cg1:
                 st.bar_chart(geo.set_index("Region")["Nb Prospects"], color="#FF6B35")
@@ -1716,12 +1732,14 @@ elif "Analyse Business" in page:
         # Scoring summary + recommandations McKinsey
         if "Grade" in df_ana.columns:
             st.markdown('<div class="section-title">Synthese scoring & recommandations strategiques</div>', unsafe_allow_html=True)
-            grade_s = df_ana.groupby("Grade").agg(
-                nb=("Account Name","count"),
-                score_moy=("Score Total","mean"),
-                etab_moy=("Nb Etablissements","mean"),
-            ).round(1).reset_index()
-            grade_s.columns = ["Grade","Nb Prospects","Score Moyen","Etab. Moyen"]
+            _grade_agg = {"nb": ("Account Name","count")}
+            if "Score Total" in df_ana.columns:
+                _grade_agg["score_moy"] = ("Score Total","mean")
+            if "Nb Etablissements" in df_ana.columns:
+                df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
+                _grade_agg["etab_moy"] = ("Nb Etablissements","mean")
+            grade_s = df_ana.groupby("Grade").agg(**_grade_agg).round(1).reset_index()
+            grade_s.columns = ["Grade"] + [c for c in ["Nb Prospects","Score Moyen","Etab. Moyen"][:len(_grade_agg)]]
             st.dataframe(grade_s, use_container_width=True)
 
             n_a = (df_ana["Grade"]=="A").sum() if "Grade" in df_ana.columns else 0
