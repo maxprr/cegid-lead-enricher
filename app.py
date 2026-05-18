@@ -1457,28 +1457,41 @@ elif "🔍 Prospection From Scratch" in page:
     else:
         with col_btn2:
             launch = st.button("Lancer la prospection", use_container_width=True)
+
         if launch:
             with st.spinner("Recherche en cours..."):
                 df_p = prospect_by_naf(naf_sel, region_sel, min_etab, max_res)
             if df_p.empty:
-                st.error("Aucun resultat. Reduisez le filtre 'Nb min etablissements' a 1 ou 2.")
+                st.error("Aucun resultat. Reduisez le filtre Nb min etablissements a 1 ou 2.")
             else:
-                c1,c2,c3,c4 = st.columns(4)
-                with c1: st.markdown('<div class="metric-card"><div class="label">Prospects</div><div class="value">{:,}</div></div>'.format(len(df_p)), unsafe_allow_html=True)
-                with c2: st.markdown('<div class="metric-card"><div class="label">Nb etab. median</div><div class="value">{:.0f}</div></div>'.format(pd.to_numeric(df_p["Nb Etablissements"],errors="coerce").median()), unsafe_allow_html=True)
-                with c3: st.markdown('<div class="metric-card"><div class="label">Villes</div><div class="value">{}</div></div>'.format(df_p["Ville"].nunique()), unsafe_allow_html=True)
-                with c4: st.markdown('<div class="metric-card"><div class="label">Regions</div><div class="value">{}</div></div>'.format(df_p["Region"].nunique()), unsafe_allow_html=True)
-
-                st.markdown('<div class="section-title">Liste des prospects</div>', unsafe_allow_html=True)
-                st.dataframe(df_p.sort_values("Nb Etablissements", ascending=False), use_container_width=True, height=400)
                 st.session_state.df_prospects = df_p
+                st.session_state.df_scored    = None
 
-                st.markdown('<div class="info-box">Prospects disponibles dans <strong>Scoring & Top 100</strong> et <strong>Analyse Business</strong>.</div>', unsafe_allow_html=True)
+        # Afficher depuis session_state : persiste apres navigation entre pages
+        if st.session_state.df_prospects is not None:
+            df_p = st.session_state.df_prospects
+            c1,c2,c3,c4 = st.columns(4)
+            with c1: st.markdown('<div class="metric-card"><div class="label">Prospects</div><div class="value">{:,}</div></div>'.format(len(df_p)), unsafe_allow_html=True)
+            with c2: st.markdown('<div class="metric-card"><div class="label">Nb etab. median</div><div class="value">{:.0f}</div></div>'.format(pd.to_numeric(df_p["Nb Etablissements"],errors="coerce").median()), unsafe_allow_html=True)
+            with c3: st.markdown('<div class="metric-card"><div class="label">Villes</div><div class="value">{}</div></div>'.format(df_p["Ville"].nunique()), unsafe_allow_html=True)
+            with c4: st.markdown('<div class="metric-card"><div class="label">Regions</div><div class="value">{}</div></div>'.format(df_p["Region"].nunique()), unsafe_allow_html=True)
+
+            st.markdown('<div class="section-title">Liste des prospects</div>', unsafe_allow_html=True)
+            st.dataframe(df_p.sort_values("Nb Etablissements", ascending=False), use_container_width=True, height=400)
+
+            col_dl, col_rst = st.columns([3,1])
+            with col_dl:
                 st.download_button("Telecharger {:,} prospects (.xlsx)".format(len(df_p)),
                     data=to_excel(df_p),
                     file_name="prospects_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True)
+            with col_rst:
+                if st.button("Effacer", use_container_width=True):
+                    st.session_state.df_prospects = None
+                    st.session_state.df_scored    = None
+                    st.rerun()
+            st.markdown('<div class="info-box">Resultats conserves apres navigation. Cliquez <b>Effacer</b> pour lancer une nouvelle recherche.</div>', unsafe_allow_html=True)
 
 # ==================================================================
 # PAGE 3 - SCORING & TOP 100
