@@ -1158,11 +1158,6 @@ with st.sidebar:
     st.markdown("{} Pappers {}".format("🟢" if PAPPERS_KEY else "🔴", "(active)" if PAPPERS_KEY else "(absente)"))
     st.markdown("{} Google Maps {}".format("🟢" if GMAPS_KEY else "🔴", "(active)" if GMAPS_KEY else "(absente)"))
     st.markdown("{} SerpApi {}".format("🟢" if SERPAPI_KEY else "⚪", "(active)" if SERPAPI_KEY else "(optionnel)"))
-    if not PAPPERS_KEY or not GMAPS_KEY:
-        if ON_CLOUD:
-            st.markdown("<small style='color:#fbbf24'>Ajoutez vos cles dans Settings → Secrets</small>", unsafe_allow_html=True)
-        else:
-            st.markdown("<small style='color:#fbbf24'>Ajoutez vos cles dans le fichier .env</small>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**Sources**")
     st.markdown("""
