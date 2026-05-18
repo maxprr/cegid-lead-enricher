@@ -1,6 +1,6 @@
 """
-Cegid Retail — Lead Enricher v2.0
-Application Streamlit — 4 pages :
+Cegid Retail - Lead Enricher v2.0
+Application Streamlit - 4 pages :
   1. Enrichissement Dataset
   2. Prospection From Scratch
   3. Scoring & Top 100
@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 # ==================================================================
 
 st.set_page_config(
-    page_title="Cegid Retail — Lead Enricher",
+    page_title="Cegid Retail - Lead Enricher",
     page_icon="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgcng9IjE2IiBmaWxsPSIjMDAzMDgyIi8+CiAgPHRleHQgeD0iNTAiIHk9IjcyIiBmb250LWZhbWlseT0iQXJpYWwgQmxhY2ssIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iNjgiIAogICAgICAgIGZvbnQtd2VpZ2h0PSI5MDAiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DPC90ZXh0Pgo8L3N2Zz4=",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -32,9 +32,9 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2_family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
-/* -- Base : thème clair forcé ---------------------------------- */
+/* -- Base : theme clair force ---------------------------------- */
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"],
@@ -43,7 +43,7 @@ html, body,
     font-family: 'DM Sans', sans-serif !important;
 }
 
-/* -- Texte général : sombre sur fond clair --------------------- */
+/* -- Texte general : sombre sur fond clair --------------------- */
 .stMarkdown, .stMarkdown p, .stMarkdown li,
 [data-testid="stMarkdownContainer"] p,
 [data-testid="stMarkdownContainer"] li,
@@ -166,10 +166,10 @@ div[data-testid="stButton"] > button span {
 
 def load_keys():
     """
-    Charge les clés API :
-    - Streamlit Cloud : st.secrets (Settings → Secrets dans le dashboard)
-    - Local           : fichier .env dans le même dossier que app.py
-    Priorité : st.secrets > .env
+    Charge les cles API :
+    - Streamlit Cloud : st.secrets (Settings -> Secrets dans le dashboard)
+    - Local           : fichier .env dans le meme dossier que app.py
+    Priorite : st.secrets > .env
     """
     keys = {}
 
@@ -195,7 +195,7 @@ def load_keys():
     return keys
 
 def is_streamlit_cloud():
-    """Détecte si on tourne sur Streamlit Cloud."""
+    """Detecte si on tourne sur Streamlit Cloud."""
     import os
     return (
         os.environ.get("STREAMLIT_SHARING_MODE") == "1"
@@ -258,7 +258,7 @@ NAF_QUERIES = {
     "4775Z": [
         "SEPHORA","MARIONNAUD","NOCIBE","YVES ROCHER","SABON","RITUALS",
         "THE BODY SHOP","KIEHL","LUSH","NUXE","CLARINS","GUERLAIN",
-        "LANCÔME","SISLEY","BIOTHERM","L OCCITANE","PARAPHARMACIE",
+        "LANC_ME","SISLEY","BIOTHERM","L OCCITANE","PARAPHARMACIE",
     ],
     "4719A": [
         "GALERIES LAFAYETTE","PRINTEMPS","LE BON MARCHE","BHV","MONOPRIX",
@@ -299,7 +299,7 @@ NAF_QUERIES = {
     ],
 }
 
-# Requête générique fallback si NAF non listé
+# Requete generique fallback si NAF non liste
 NAF_QUERY_DEFAULT = {
     "4771Z": "vetements mode retail",
     "4775Z": "parfumerie beaute cosmetiques",
@@ -370,10 +370,10 @@ EXCLUSION_KW = [
 
 # -- Segmentation officielle Cegid (document DEF_PROSPECT_CEGID_RETAIL) --------
 CEGID_SEGMENTS = {
-    "S":  {"stores_min":5,   "stores_max":19,  "ca_min_m":5,   "ca_max_m":19,   "label":"S — 5 a 19 magasins ou 5-19M EUR CA"},
-    "M":  {"stores_min":20,  "stores_max":99,  "ca_min_m":20,  "ca_max_m":99,   "label":"M — 20 a 99 magasins ou 20-99M EUR CA"},
-    "L":  {"stores_min":100, "stores_max":499, "ca_min_m":100, "ca_max_m":499,  "label":"L — 100 a 499 magasins ou 100-499M EUR CA"},
-    "XL": {"stores_min":500, "stores_max":9999,"ca_min_m":500, "ca_max_m":99999,"label":"XL — 500+ magasins ou 500M+ EUR CA"},
+    "S":  {"stores_min":5,   "stores_max":19,  "ca_min_m":5,   "ca_max_m":19,   "label":"S - 5 a 19 magasins ou 5-19M EUR CA"},
+    "M":  {"stores_min":20,  "stores_max":99,  "ca_min_m":20,  "ca_max_m":99,   "label":"M - 20 a 99 magasins ou 20-99M EUR CA"},
+    "L":  {"stores_min":100, "stores_max":499, "ca_min_m":100, "ca_max_m":499,  "label":"L - 100 a 499 magasins ou 100-499M EUR CA"},
+    "XL": {"stores_min":500, "stores_max":9999,"ca_min_m":500, "ca_max_m":99999,"label":"XL - 500+ magasins ou 500M+ EUR CA"},
 }
 
 # -- Secteurs prioritaires Y2 --------------------------------------------------
@@ -416,7 +416,7 @@ def is_empty(val):
     return val is None or str(val).strip() in ("", "nan", "None", "NaN")
 
 def sirene_search(name, siren=None):
-    """Recherche INSEE — retourne dict avec statut lisible."""
+    """Recherche INSEE - retourne dict avec statut lisible."""
     r = {"siren":None,"naf":None,"naf_label":None,"adresse":None,
          "nb_etab":None,"effectifs":None,"statut":"Non appelee","ok":False}
     try:
@@ -424,7 +424,7 @@ def sirene_search(name, siren=None):
         params = {"q": siren or name, "per_page": 1}
         resp   = requests.get(url, params=params, headers=HEADERS, timeout=8)
         if resp.status_code != 200:
-            r["statut"] = "HTTP {} — verifie ta connexion internet".format(resp.status_code)
+            r["statut"] = "HTTP {} - verifie ta connexion internet".format(resp.status_code)
             return r
         data = resp.json()
         if not data.get("results"):
@@ -438,7 +438,7 @@ def sirene_search(name, siren=None):
             "adresse":  s.get("adresse", ""),
             "nb_etab":  c.get("nombre_etablissements_ouverts", 0),
             "effectifs":TRANCHES_EFF.get(str(c.get("tranche_effectif_salarie") or ""), ""),
-            "statut":   "OK — {} etablissements, effectifs: {}".format(
+            "statut":   "OK - {} etablissements, effectifs: {}".format(
                 c.get("nombre_etablissements_ouverts",0),
                 TRANCHES_EFF.get(str(c.get("tranche_effectif_salarie") or ""),"inconnu")),
             "ok": True,
@@ -448,14 +448,14 @@ def sirene_search(name, siren=None):
     return r
 
 def pappers_search(siren, key):
-    """Pappers API — CA + dirigeant. Statut lisible et explicite."""
+    """Pappers API - CA + dirigeant. Statut lisible et explicite."""
     r = {"ca":None,"dirigeant":None,"forme_jur":None,"creation":None,
          "statut":"Non appelee","ok":False}
     if not key or not key.strip():
-        r["statut"] = "Cle absente — ajoutez PAPPERS_API_KEY=votre_cle dans le fichier .env"
+        r["statut"] = "Cle absente - ajoutez PAPPERS_API_KEY=votre_cle dans le fichier .env"
         return r
     if is_empty(siren):
-        r["statut"] = "SIREN manquant — enrichissement Sirene necessaire d'abord"
+        r["statut"] = "SIREN manquant - enrichissement Sirene necessaire d'abord"
         return r
     try:
         siren_clean = re.sub(r"\D", "", str(siren))[:9]
@@ -464,13 +464,13 @@ def pappers_search(siren, key):
                   "comptes": "true", "dirigeants": "true"}
         resp   = requests.get(url, params=params, timeout=10)
         if resp.status_code == 401:
-            r["statut"] = "Cle Pappers INVALIDE (401) — verifiez PAPPERS_API_KEY dans .env"
+            r["statut"] = "Cle Pappers INVALIDE (401) - verifiez PAPPERS_API_KEY dans .env"
             return r
         if resp.status_code == 404:
             r["statut"] = "Entreprise non trouvee sur Pappers (SIREN: {})".format(siren_clean)
             return r
         if resp.status_code != 200:
-            r["statut"] = "Pappers HTTP {} — {}".format(resp.status_code, resp.text[:80])
+            r["statut"] = "Pappers HTTP {} - {}".format(resp.status_code, resp.text[:80])
             return r
         data    = resp.json()
         comptes = data.get("comptes_sociaux", [])
@@ -491,13 +491,13 @@ def pappers_search(siren, key):
             "dirigeant":d_str,
             "forme_jur":data.get("forme_juridique"),
             "creation": int(str(data.get("date_immatriculation_rcs",""))[:4]) if data.get("date_immatriculation_rcs") else None,
-            "statut":   "OK — CA {}{} | Dirigeant: {}".format(
+            "statut":   "OK - CA {}{} | Dirigeant: {}".format(
                 ca or "non dispo", " ({})".format(ca_year) if ca_year else "",
                 d_str or "non dispo"),
             "ok": True,
         })
     except requests.exceptions.Timeout:
-        r["statut"] = "Timeout Pappers (>10s) — reessayer"
+        r["statut"] = "Timeout Pappers (>10s) - reessayer"
     except Exception as e:
         r["statut"] = "Erreur Pappers: {}".format(str(e)[:60])
     return r
@@ -505,18 +505,18 @@ def pappers_search(siren, key):
 # ------------------------------------------------------------------
 # COMPTAGE MAGASINS - Cascade multi-sources sans Google Maps obligatoire
 #
-# Ordre de priorité :
-#   1. Overpass API (OpenStreetMap) - Gratuit, illimité, aucune clé requise
+# Ordre de priorite :
+#   1. Overpass API (OpenStreetMap) - Gratuit, illimite, aucune cle requise
 #   2. Scraping store locator du site officiel de la marque - Gratuit
-#   3. Google Maps Places API - Payant mais précis (si clé dispo)
-#   4. SerpApi - Alternatif payant (si clé dispo)
-#   5. Proxy Sirene (nb établissements) - Toujours disponible
+#   3. Google Maps Places API - Payant mais precis (si cle dispo)
+#   4. SerpApi - Alternatif payant (si cle dispo)
+#   5. Proxy Sirene (nb etablissements) - Toujours disponible
 # ------------------------------------------------------------------
 
-# Types OSM qui correspondent à des magasins physiques en propre
+# Types OSM qui correspondent a des magasins physiques en propre
 # Source : https://wiki.openstreetmap.org/wiki/Key:shop
 OSM_SHOP_TYPES = {
-    # Commerce physique confirmé
+    # Commerce physique confirme
     "shop": ["clothes","shoes","jewelry","accessories","cosmetics","beauty",
              "optician","sports","toys","books","electronics","department_store",
              "supermarket","convenience","variety_store","gift","stationery",
@@ -525,13 +525,13 @@ OSM_SHOP_TYPES = {
     "amenity": ["cafe","restaurant","fast_food","bakery","ice_cream"],
 }
 
-# Tags OSM qui indiquent un point NON physique ou non exclusif à exclure
+# Tags OSM qui indiquent un point NON physique ou non exclusif a exclure
 OSM_EXCLUDE_TAGS = {
     "internet_sales": "yes",        # E-commerce pur
     "delivery_only":  "yes",        # Livraison uniquement
     "shop":           "online",     # Shop en ligne
     "office":         ["yes","company","retail"],  # Bureau, pas magasin
-    "building":       "warehouse",  # Entrepôt
+    "building":       "warehouse",  # Entrepot
     "landuse":        "industrial", # Zone industrielle
 }
 
@@ -545,7 +545,7 @@ OSM_NAME_EXCLUDE = [
 
 def _is_physical_owned_store(element, brand_name):
     """
-    Vérifie si un élément OSM est bien un magasin physique en propre.
+    Verifie si un element OSM est bien un magasin physique en propre.
     Retourne (bool, raison).
     """
     tags = element.get("tags", {})
@@ -561,46 +561,46 @@ def _is_physical_owned_store(element, brand_name):
     if brand_word not in name and brand_word not in brand:
         return False, "Nom '{}' ne contient pas la marque '{}'".format(name[:30], brand_word)
 
-    # 2. Exclure les mots-clés non-exclusifs dans le nom
+    # 2. Exclure les mots-cles non-exclusifs dans le nom
     for excl in OSM_NAME_EXCLUDE:
         if excl in name:
-            return False, "Nom contient '{}' → non exclusif".format(excl)
+            return False, "Nom contient '{}' -> non exclusif".format(excl)
 
-    # 3. Exclure les tags e-commerce / bureau / entrepôt
+    # 3. Exclure les tags e-commerce / bureau / entrepot
     for tag_key, tag_val in OSM_EXCLUDE_TAGS.items():
         osm_val = tags.get(tag_key, "")
         if isinstance(tag_val, list):
             if osm_val in tag_val:
-                return False, "Tag {}={} → hors périmètre".format(tag_key, osm_val)
+                return False, "Tag {}={} -> hors perimetre".format(tag_key, osm_val)
         else:
             if osm_val == tag_val:
-                return False, "Tag {}={} → hors périmètre".format(tag_key, osm_val)
+                return False, "Tag {}={} -> hors perimetre".format(tag_key, osm_val)
 
     # 4. Valider que c'est bien un type de commerce physique
     shop_ok = any(shop in types for types in OSM_SHOP_TYPES.values()) or shop != ""
     amenity_ok = amenity in OSM_SHOP_TYPES.get("amenity", [])
     building_ok = tags.get("building") in ("retail", "commercial", "yes", "")
 
-    # Si shop tag présent et non exclu = magasin physique confirmé
+    # Si shop tag present et non exclu = magasin physique confirme
     if shop and shop not in ("online", "internet"):
         return True, "Magasin physique confirme (shop={})".format(shop)
 
-    # Si pas de tag shop mais coordonnées et nom de marque = accepté prudemment
+    # Si pas de tag shop mais coordonnees et nom de marque = accepte prudemment
     if "lat" in element or element.get("type") in ("node", "way"):
-        return True, "Point physique géolocalisé avec nom de marque"
+        return True, "Point physique geolocalise avec nom de marque"
 
-    return False, "Type inconnu — exclu par precaution"
+    return False, "Type inconnu - exclu par precaution"
 
 
 def _overpass_count(brand_name):
     """
     Compte les magasins PHYSIQUES EN PROPRE d'une enseigne en France.
-    Utilise OpenStreetMap / Overpass API — gratuit, sans clé.
+    Utilise OpenStreetMap / Overpass API - gratuit, sans cle.
 
-    Filtres appliqués :
+    Filtres appliques :
     - Le nom du lieu doit contenir le nom de la marque (exclut corners/revendeurs)
-    - Le type OSM doit être un commerce physique (shop=clothes, shop=shoes, etc.)
-    - Exclusion explicite : e-commerce, bureaux, entrepôts, corners multimarques
+    - Le type OSM doit etre un commerce physique (shop=clothes, shop=shoes, etc.)
+    - Exclusion explicite : e-commerce, bureaux, entrepots, corners multimarques
     - Exclusion par nom : 'corner', 'galeries lafayette', 'printemps', etc.
     """
     r = {"nb_stores": None, "nb_exclu": 0, "methode": "OpenStreetMap Overpass",
@@ -608,8 +608,8 @@ def _overpass_count(brand_name):
 
     brand = brand_name.strip()
 
-    # Requête Overpass : récupérer les éléments complets (pas juste le count)
-    # pour pouvoir appliquer nos filtres côté client
+    # Requete Overpass : recuperer les elements complets (pas juste le count)
+    # pour pouvoir appliquer nos filtres cote client
     query = """
 [out:json][timeout:30];
 (
@@ -643,7 +643,7 @@ out tags;
             elements = data.get("elements", [])
 
             if not elements:
-                # Essayer avec juste le count pour savoir si OSM a des données
+                # Essayer avec juste le count pour savoir si OSM a des donnees
                 query_count = '[out:json][timeout:15];node["brand"="{b}"]["addr:country"="FR"];out count;'.format(b=brand)
                 resp2 = requests.post(endpoint, data={"data": query_count},
                                       headers={"User-Agent": "CegidRetailLeadEnricher/2.0"}, timeout=15)
@@ -656,7 +656,7 @@ out tags;
                             return r
                 continue
 
-            # Filtrage côté client
+            # Filtrage cote client
             kept   = []
             exclu  = []
             for el in elements:
@@ -665,13 +665,13 @@ out tags;
                 if valid:
                     kept.append(name)
                 else:
-                    exclu.append("{} → {}".format(name[:25], reason))
+                    exclu.append("{} -> {}".format(name[:25], reason))
 
             r.update({
                 "nb_stores": len(kept),
                 "nb_exclu":  len(exclu),
                 "statut": (
-                    "OK — {total} elements OSM trouves : "
+                    "OK - {total} elements OSM trouves : "
                     "{kept} magasins en propre conserves, "
                     "{exclu} exclus (corners/e-commerce/bureaux)"
                 ).format(total=len(elements), kept=len(kept), exclu=len(exclu)),
@@ -685,7 +685,7 @@ out tags;
         except Exception as e:
             continue
 
-    r["statut"] = "Overpass indisponible (tous les endpoints) — passage au fallback"
+    r["statut"] = "Overpass indisponible (tous les endpoints) - passage au fallback"
     return r
 
 
@@ -693,17 +693,17 @@ def _scrape_store_locator(brand_name):
     """
     Extrait le nombre de MAGASINS PHYSIQUES EN PROPRE depuis les snippets web.
 
-    Filtres appliqués sur le texte extrait :
+    Filtres appliques sur le texte extrait :
     - Patterns qui mentionnent explicitement 'boutiques en propre', 'magasins physiques'
     - Exclusion des mentions e-commerce : 'site', 'en ligne', 'web', 'livraison', 'click'
     - Exclusion des mentions de revendeurs : 'revendeurs', 'points de vente partenaires',
       'corners', 'distributeurs'
-    - Plage réaliste : entre 2 et 5000 magasins (filtre les chiffres aberrants)
+    - Plage realiste : entre 2 et 5000 magasins (filtre les chiffres aberrants)
     """
     r = {"nb_stores": None, "methode": "Scraping store locator", "statut": "", "ok": False}
     try:
         query = "{} boutiques magasins physiques France nombre".format(brand_name)
-        url   = "https://html.duckduckgo.com/html/?q={}".format(
+        url   = "https://html.duckduckgo.com/html/_q={}".format(
             requests.utils.quote(query))
         resp  = requests.get(url, headers=HEADERS, timeout=10)
 
@@ -711,7 +711,7 @@ def _scrape_store_locator(brand_name):
         snippets = [el.get_text() for el in soup.find_all("a", class_="result__snippet")][:8]
         full_txt = " ".join(snippets).lower()
 
-        # Mots qui invalident un résultat (mention e-commerce ou revendeur)
+        # Mots qui invalident un resultat (mention e-commerce ou revendeur)
         ECOM_SIGNALS = [
             "site internet", "boutique en ligne", "e-commerce", "e commerce",
             "commande en ligne", "livraison a domicile", "click and collect uniquement",
@@ -719,18 +719,18 @@ def _scrape_store_locator(brand_name):
             "corners", "galeries lafayette", "printemps",
         ]
 
-        # Patterns spécifiques magasins physiques en propre (du plus précis au moins précis)
+        # Patterns specifiques magasins physiques en propre (du plus precis au moins precis)
         patterns_owned = [
-            # Très précis : mention explicite "en propre" ou "physique"
-            (r"(\d+)\s+(?:boutiques?|magasins?|stores?)\s+(?:en\s+propre|physiques?|exclusifs?)", "magasins en propre mentionnes"),
-            # Précis : magasins en France avec nombre
-            (r"(\d+)\s+(?:boutiques?|magasins?|stores?)\s+en\s+france", "magasins en France"),
-            (r"(\d+)\s+boutiques?\s+(?:a\s+travers|partout|dans)", "boutiques physiques"),
-            # Moins précis : réseau de magasins
-            (r"reseau\s+(?:de\s+)?(\d+)\s+(?:boutiques?|magasins?)", "réseau de magasins"),
-            (r"(\d+)\s+points?\s+de\s+vente\s+(?:en\s+france|physiques?|exclusifs?)", "points de vente physiques"),
+            # Tres precis : mention explicite "en propre" ou "physique"
+            (r"(\d+)\s+(_:boutiques_|magasins_|stores_)\s+(_:en\s+propre|physiques_|exclusifs_)", "magasins en propre mentionnes"),
+            # Precis : magasins en France avec nombre
+            (r"(\d+)\s+(_:boutiques_|magasins_|stores_)\s+en\s+france", "magasins en France"),
+            (r"(\d+)\s+boutiques_\s+(_:a\s+travers|partout|dans)", "boutiques physiques"),
+            # Moins precis : reseau de magasins
+            (r"reseau\s+(_:de\s+)_(\d+)\s+(_:boutiques_|magasins_)", "reseau de magasins"),
+            (r"(\d+)\s+points_\s+de\s+vente\s+(_:en\s+france|physiques_|exclusifs_)", "points de vente physiques"),
             # Fallback : nombre suivi de boutiques/magasins (sans mention e-com autour)
-            (r"(\d+)\s+(?:boutiques?|magasins?|stores?)", "mention de boutiques"),
+            (r"(\d+)\s+(_:boutiques_|magasins_|stores_)", "mention de boutiques"),
         ]
 
         for pat, label in patterns_owned:
@@ -738,7 +738,7 @@ def _scrape_store_locator(brand_name):
                 nb = int(m.group(1))
                 if not (2 <= nb <= 5000):
                     continue
-                # Vérifier contexte : pas de signal e-commerce dans les 100 chars autour
+                # Verifier contexte : pas de signal e-commerce dans les 100 chars autour
                 start = max(0, m.start() - 100)
                 end   = min(len(full_txt), m.end() + 100)
                 context = full_txt[start:end]
@@ -747,7 +747,7 @@ def _scrape_store_locator(brand_name):
                     continue  # Ce chiffre concerne le e-commerce ou des revendeurs
                 r.update({
                     "nb_stores": nb,
-                    "statut": "OK — {} magasins extraits (pattern: '{}', contexte verifie)".format(nb, label),
+                    "statut": "OK - {} magasins extraits (pattern: '{}', contexte verifie)".format(nb, label),
                     "ok": True,
                 })
                 return r
@@ -761,7 +761,7 @@ def _scrape_store_locator(brand_name):
 def count_stores(name, gmaps_key=None, serpapi_key=None):
     """
     Cascade multi-sources pour compter les magasins en propre.
-    Essaie chaque source dans l'ordre et retourne dès qu'un résultat est trouvé.
+    Essaie chaque source dans l'ordre et retourne des qu'un resultat est trouve.
     """
     r = {"nb_stores": None, "methode": None, "statut": "Non appelee", "ok": False}
 
@@ -769,7 +769,7 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
         r["statut"] = "Nom de marque manquant"
         return r
 
-    # -- Source 1 : Overpass / OpenStreetMap (gratuit, sans clé) --------------
+    # -- Source 1 : Overpass / OpenStreetMap (gratuit, sans cle) --------------
     res = _overpass_count(name)
     if res["ok"] and res["nb_stores"] is not None and res["nb_stores"] > 0:
         return res
@@ -779,7 +779,7 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
     if res2["ok"] and res2["nb_stores"] is not None:
         return res2
 
-    # -- Source 3 : Google Maps Places API (si clé dispo) ---------------------
+    # -- Source 3 : Google Maps Places API (si cle dispo) ---------------------
     if gmaps_key and gmaps_key.strip():
         try:
             url    = "https://maps.googleapis.com/maps/api/place/textsearch/json"
@@ -789,7 +789,7 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
             data   = resp.json()
             status = data.get("status", "")
             if status == "REQUEST_DENIED":
-                r["statut"] = "Google Maps REFUS — verifiez Places API dans Google Cloud Console: {}".format(
+                r["statut"] = "Google Maps REFUS - verifiez Places API dans Google Cloud Console: {}".format(
                     data.get("error_message", ""))
             elif status in ("OK", "ZERO_RESULTS"):
                 places  = data.get("results", [])
@@ -800,13 +800,13 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
                 return {
                     "nb_stores": len(owned),
                     "methode":   "Google Places API",
-                    "statut":    "OK — {} lieux, {} en propre apres filtrage".format(len(places), len(owned)),
+                    "statut":    "OK - {} lieux, {} en propre apres filtrage".format(len(places), len(owned)),
                     "ok":        True,
                 }
         except Exception as e:
             pass  # Fallback suivant
 
-    # -- Source 4 : SerpApi (si clé dispo) ------------------------------------
+    # -- Source 4 : SerpApi (si cle dispo) ------------------------------------
     if serpapi_key and serpapi_key.strip():
         try:
             url    = "https://serpapi.com/search"
@@ -818,13 +818,13 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
             return {
                 "nb_stores": len(owned),
                 "methode":   "SerpApi Google Maps",
-                "statut":    "OK — {} magasins en propre".format(len(owned)),
+                "statut":    "OK - {} magasins en propre".format(len(owned)),
                 "ok":        True,
             }
         except Exception as e:
             pass
 
-    # -- Aucune source n'a fonctionné ------------------------------------------
+    # -- Aucune source n'a fonctionne ------------------------------------------
     r["statut"] = ("OpenStreetMap: {} | Store locator: {} | "
                    "Google Maps: {} | SerpApi: {}").format(
         res.get("statut","non tente")[:40],
@@ -835,7 +835,7 @@ def count_stores(name, gmaps_key=None, serpapi_key=None):
     return r
 
 
-# Alias pour compatibilité avec enrich_row
+# Alias pour compatibilite avec enrich_row
 def gmaps_stores(name, gmaps_key=None, serpapi_key=None):
     return count_stores(name, gmaps_key=gmaps_key, serpapi_key=serpapi_key)
 
@@ -878,7 +878,7 @@ def enrich_row(row):
     needs_m = is_empty(row.get("No. of Stores"))
     if needs_m and name:
         res = gmaps_stores(name, GMAPS_KEY or None, SERPAPI_KEY or None)
-        # Log détaillé : méthode utilisée + nb exclus si Overpass
+        # Log detaille : methode utilisee + nb exclus si Overpass
         detail = res["statut"]
         if res.get("nb_exclu", 0) > 0:
             detail += " | Exclus: {}".format(res.get("nb_exclu", 0))
@@ -899,18 +899,18 @@ def enrich_row(row):
 def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
     """
     Prospection via API Sirene. 
-    Stratégie : collecter max_results * 3 résultats bruts avant déduplication
-    pour compenser les pertes dues au filtrage et à la déduplication.
+    Strategie : collecter max_results * 3 resultats bruts avant deduplication
+    pour compenser les pertes dues au filtrage et a la deduplication.
     """
     results, seen = [], set()
-    # Collecter beaucoup plus que demandé avant dédup
+    # Collecter beaucoup plus que demande avant dedup
     collect_target = max_results * 4
     region_code    = REGIONS_INSEE.get(region) if region and region != "Toutes les regions" else None
     url            = "https://recherche-entreprises.api.gouv.fr/search"
     errors, prog   = [], st.empty()
 
     def fetch_one(query, naf, label=""):
-        """Fait une requête et retourne les résultats filtrés."""
+        """Fait une requete et retourne les resultats filtres."""
         found = []
         for page in range(1, 4):
             try:
@@ -963,19 +963,19 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
         naf_label = NAF_RETAIL.get(naf, "")
         queries   = NAF_QUERIES.get(naf, [])
 
-        # Stratégie 1 : chercher par enseigne connue
+        # Strategie 1 : chercher par enseigne connue
         if isinstance(queries, list):
             for q_idx, enseigne in enumerate(queries):
                 if len(results) >= collect_target: break
-                prog.caption("NAF {} ({}/{}) — enseigne '{}' — {} prospects...".format(
+                prog.caption("NAF {} ({}/{}) - enseigne '{}' - {} prospects...".format(
                     naf, i+1, len(naf_codes), enseigne, len(results)))
                 results.extend(fetch_one(enseigne, naf, naf_label))
                 time.sleep(0.2)
 
-        # Stratégie 2 : requête générique en fallback
+        # Strategie 2 : requete generique en fallback
         generic = NAF_QUERY_DEFAULT.get(naf, "")
         if generic and len(results) < collect_target:
-            prog.caption("NAF {} — recherche generique '{}' — {} prospects...".format(
+            prog.caption("NAF {} - recherche generique '{}' - {} prospects...".format(
                 naf, generic, len(results)))
             results.extend(fetch_one(generic, naf, naf_label))
 
@@ -990,11 +990,11 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
 
     df = pd.DataFrame(results)
 
-    # -- Déduplication passe 1 : SIREN exact ----------------------------------
+    # -- Deduplication passe 1 : SIREN exact ----------------------------------
     n_avant = len(df)
     df = df.drop_duplicates(subset=["National ID"], keep="first")
 
-    # -- Déduplication passe 2 : Nom normalisé (groupes/filiales) -------------
+    # -- Deduplication passe 2 : Nom normalise (groupes/filiales) -------------
     def normalize_name(name):
         if not name: return ""
         n = str(name).upper().strip()
@@ -1006,16 +1006,16 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
         return " ".join(words[:2]).strip()
 
     df["_nom_norm"] = df["Account Name"].apply(normalize_name)
-    # Trier par nb établissements desc avant dédup : on garde la plus grande entité
+    # Trier par nb etablissements desc avant dedup : on garde la plus grande entite
     df = (df.sort_values("Nb Etablissements", ascending=False)
             .drop_duplicates(subset=["_nom_norm"], keep="first")
             .drop(columns=["_nom_norm"])
             .reset_index(drop=True))
 
-    # -- Passe 3 : fuzzy léger (nom contenu dans l'autre) ---------------------
+    # -- Passe 3 : fuzzy leger (nom contenu dans l'autre) ---------------------
     names   = df["Account Name"].str.upper().str.strip().tolist()
     to_drop = set()
-    for i in range(min(len(names), 200)):   # Limiter à 200 pour performance
+    for i in range(min(len(names), 200)):   # Limiter a 200 pour performance
         if i in to_drop: continue
         for j in range(i+1, min(i+15, len(names))):
             if j in to_drop: continue
@@ -1029,7 +1029,7 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
     if to_drop:
         df = df.drop(index=list(to_drop)).reset_index(drop=True)
 
-    # Trier par nb établissements et retourner max_results
+    # Trier par nb etablissements et retourner max_results
     df = df.sort_values("Nb Etablissements", ascending=False).reset_index(drop=True)
     return df.head(max_results)
 
@@ -1038,7 +1038,7 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
 # ==================================================================
 
 def _get_nb_stores(row):
-    """Récupère le nb de magasins depuis les colonnes disponibles."""
+    """Recupere le nb de magasins depuis les colonnes disponibles."""
     for col in ["No. of Stores","Nb Etablissements"]:
         v = row.get(col)
         try:
@@ -1050,11 +1050,11 @@ def _get_ca_m(row):
     """Tente d'extraire le CA en millions depuis la colonne Annual Revenue."""
     ca_raw = str(row.get("Annual Revenue","") or "")
     if is_empty(ca_raw): return None
-    # Nettoyer : supprimer espaces, lettres, garder chiffres et séparateurs
+    # Nettoyer : supprimer espaces, lettres, garder chiffres et separateurs
     cleaned = re.sub(r"[^\d.,]", "", ca_raw.replace(" ",""))
     try:
         ca_num = float(cleaned.replace(",","."))
-        # Si le chiffre est très grand (en euros), convertir en millions
+        # Si le chiffre est tres grand (en euros), convertir en millions
         if ca_num > 100_000:
             ca_num = ca_num / 1_000_000
         return ca_num
@@ -1062,7 +1062,7 @@ def _get_ca_m(row):
         return None
 
 def _assign_segment(nb_stores, ca_m):
-    """Attribue le segment officiel Cegid (S/M/L/XL) selon les règles du document."""
+    """Attribue le segment officiel Cegid (S/M/L/XL) selon les regles du document."""
     for seg, rules in CEGID_SEGMENTS.items():
         if nb_stores >= rules["stores_min"] and nb_stores <= rules["stores_max"]:
             return seg
@@ -1074,7 +1074,7 @@ def _assign_segment(nb_stores, ca_m):
 
 def _score_product_fit(row, nb_stores, ca_m, naf, lbl, sect, pays, segment):
     """
-    Calcule le score FIT pour chaque produit Cegid selon les règles officielles.
+    Calcule le score FIT pour chaque produit Cegid selon les regles officielles.
     Retourne dict {produit: score_fit, ...}
     """
     scores = {}
@@ -1095,7 +1095,7 @@ def _score_product_fit(row, nb_stores, ca_m, naf, lbl, sect, pays, segment):
     elif nb_stores >= 20:   fit_y2 += 15
     elif nb_stores >= 5:    fit_y2 += 8
     else:                   fit_y2 -= 10  # Hors cible
-    # Géographie Y2
+    # Geographie Y2
     if any(g.lower() in pays.lower() for g in ["france","belgique","suisse","luxembourg"]):
         fit_y2 += 15
     elif any(g.lower() in pays.lower() for g in ["uk","united kingdom","allemagne","espagne","italie","ireland"]):
@@ -1116,7 +1116,7 @@ def _score_product_fit(row, nb_stores, ca_m, naf, lbl, sect, pays, segment):
     elif ca_m and ca_m >= 10:  fit_orli += 15
     elif ca_m and ca_m >= 3:   fit_orli += 8
     elif ca_m:                  fit_orli -= 5  # CA trop faible
-    # Géographie Orli : zones francophones uniquement
+    # Geographie Orli : zones francophones uniquement
     if any(g.lower() in pays.lower() for g in ["france","belgique","suisse","luxembourg","monaco","andorre"]):
         fit_orli += 15
     elif any(g.lower() in pays.lower() for g in ["maroc","tunisie"]):
@@ -1139,7 +1139,7 @@ def _score_product_fit(row, nb_stores, ca_m, naf, lbl, sect, pays, segment):
         fit_se += 20
     elif any(naf.startswith(p) for p in ["4771","4772","4775","4777"]):
         fit_se += 15
-    # Géographie SE : Europe Nord + France/Belgique/Suisse
+    # Geographie SE : Europe Nord + France/Belgique/Suisse
     SE_GEO = ["france","belgique","suisse","luxembourg","uk","united kingdom","ireland","allemagne"]
     if any(g.lower() in pays.lower() for g in SE_GEO):
         fit_se += 15
@@ -1152,18 +1152,18 @@ def _score_product_fit(row, nb_stores, ca_m, naf, lbl, sect, pays, segment):
 
 def compute_score(row):
     """
-    Scoring calibré sur le document officiel Cegid 'Définition d'un prospect'.
+    Scoring calibre sur le document officiel Cegid 'Definition d'un prospect'.
 
     Structure du score :
     - FIT Y2 (0-65) + FIT Orli (0-65) + FIT Store Excellence (0-65)
     - Score principal = meilleur FIT produit
-    - TIMING (0-35) : qualité lead + dirigeant identifié + segmentation
+    - TIMING (0-35) : qualite lead + dirigeant identifie + segmentation
 
-    Produit recommandé = celui avec le meilleur FIT score.
+    Produit recommande = celui avec le meilleur FIT score.
     """
     det = []
 
-    # Récupérer les données clés
+    # Recuperer les donnees cles
     naf   = str(row.get("Industry Code","") or "").replace(".","")
     lbl   = str(row.get("Industry Label","") or "").lower()
     sect  = str(row.get("Retail Sector","") or "").lower()
@@ -1186,21 +1186,21 @@ def compute_score(row):
     # -- TIMING (35 pts) -------------------------------------------------------
     timing = 0
 
-    # Taille réseau → urgence (un grand réseau = plus de magasins à équiper = deal plus large)
-    if   nb >= 500: timing += 15; det.append("Reseau XL 500+ → deal majeur +15")
-    elif nb >= 100: timing += 12; det.append("Reseau L 100-499 → deal important +12")
+    # Taille reseau -> urgence (un grand reseau = plus de magasins a equiper = deal plus large)
+    if   nb >= 500: timing += 15; det.append("Reseau XL 500+ -> deal majeur +15")
+    elif nb >= 100: timing += 12; det.append("Reseau L 100-499 -> deal important +12")
     elif nb >= 20:  timing += 8;  det.append("Reseau M 20-99 +8")
     elif nb >= 5:   timing += 4;  det.append("Reseau S 5-19 +4")
-    else:           det.append("Reseau <5 → hors cible +0")
+    else:           det.append("Reseau <5 -> hors cible +0")
 
-    # Qualité des données disponibles
+    # Qualite des donnees disponibles
     filled = sum(1 for c in ["National ID","Industry Code","Adresse Siege",
                               "Effectifs","Annual Revenue","Dirigeant"]
                  if not is_empty(row.get(c)))
     timing += min(10, filled * 2)
     det.append("Qualite lead {}/6 champs +{}".format(filled, min(10, filled*2)))
 
-    # Dirigeant identifié → contact direct possible
+    # Dirigeant identifie -> contact direct possible
     if not is_empty(row.get("Dirigeant")):
         timing += 10; det.append("Dirigeant identifie +10 (contact direct possible)")
     elif not is_empty(row.get("Annual Revenue")):
@@ -1211,7 +1211,7 @@ def compute_score(row):
     grade   = "A" if total >= 75 else ("B" if total >= 55 else ("C" if total >= 35 else "D"))
     prio    = {"A":"Priorite 1","B":"Priorite 2","C":"Priorite 3","D":"Hors scope"}[grade]
 
-    # Persona recommandé selon le produit et le segment
+    # Persona recommande selon le produit et le segment
     personas_dict = PERSONAS.get(best_product, {})
     persona = personas_dict.get(segment, personas_dict.get("all", ["Direction Informatique"]))
     persona_str = " / ".join(persona[:3])
@@ -1232,7 +1232,7 @@ def compute_score(row):
     }
 
 def normalize_name_dedup(name):
-    """Normalise un nom pour la déduplication (utilisé dans score_df)."""
+    """Normalise un nom pour la deduplication (utilise dans score_df)."""
     if not name: return ""
     n = str(name).upper().strip()
     for suffix in [" SAS"," SA"," SARL"," SNC"," SASU"," SCM"," SCI",
@@ -1244,7 +1244,7 @@ def normalize_name_dedup(name):
     return " ".join(words[:2]).strip()
 
 def score_df(df):
-    # Déduplication avant scoring (filiales avec noms similaires)
+    # Deduplication avant scoring (filiales avec noms similaires)
     df = df.copy()
     df["_nom_norm"] = df["Account Name"].apply(normalize_name_dedup)
     nb_col = "Nb Etablissements" if "Nb Etablissements" in df.columns else df.columns[0]
@@ -1297,45 +1297,45 @@ with st.sidebar:
     st.markdown("**Lead Enricher v2.0**")
     st.markdown("---")
     page = st.radio("Navigation", [
-        "📂 Enrichissement Dataset",
-        "🔍 Prospection From Scratch",
-        "🏆 Scoring & Top 100",
-        "📊 Analyse Business",
+        "Enrichissement Dataset",
+        "Prospection From Scratch",
+        "Scoring & Top 100",
+        "Analyse Business",
     ], label_visibility="collapsed")
     st.markdown("---")
     st.markdown("**Statut des cles API**")
-    st.markdown("{} Pappers {}".format("🟢" if PAPPERS_KEY else "🔴", "(active)" if PAPPERS_KEY else "(absente)"))
-    st.markdown("{} Google Maps {}".format("🟢" if GMAPS_KEY else "🔴", "(active)" if GMAPS_KEY else "(absente)"))
-    st.markdown("{} SerpApi {}".format("🟢" if SERPAPI_KEY else "⚪", "(active)" if SERPAPI_KEY else "(optionnel)"))
+    st.markdown("{} Pappers {}".format("OK" if PAPPERS_KEY else "KO", "(active)" if PAPPERS_KEY else "(absente)"))
+    st.markdown("{} Google Maps {}".format("OK" if GMAPS_KEY else "KO", "(active)" if GMAPS_KEY else "(absente)"))
+    st.markdown("{} SerpApi {}".format("OK" if SERPAPI_KEY else "KO", "(active)" if SERPAPI_KEY else "(optionnel)"))
     st.markdown("---")
     st.markdown("**Sources**")
     st.markdown("""
-- API Sirene (INSEE) — gratuit, illimite
-- OpenStreetMap Overpass — gratuit, sans cle
-- Scraping store locator — gratuit
-- Pappers API — 1 000 req/mois gratuit
-- Google Maps Places — optionnel
+- API Sirene (INSEE) - gratuit, illimite
+- OpenStreetMap Overpass - gratuit, sans cle
+- Scraping store locator - gratuit
+- Pappers API - 1 000 req/mois gratuit
+- Google Maps Places - optionnel
     """)
 
 # ==================================================================
 # PAGE 1 - ENRICHISSEMENT DATASET
 # ==================================================================
 
-if "📂 Enrichissement Dataset" in page:
+if "Enrichissement Dataset" in page:
     st.markdown("""<div class="main-header">
-        <h1>Cegid Retail — <span class="accent">Enrichissement</span></h1>
-        <p>Completion automatique de votre base · Chaque action est tracee et expliquee</p>
+        <h1>Cegid Retail - <span class="accent">Enrichissement</span></h1>
+        <p>Completion automatique de votre base _ Chaque action est tracee et expliquee</p>
     </div>""", unsafe_allow_html=True)
 
     if not PAPPERS_KEY:
         _on_cloud = ON_CLOUD
         if ON_CLOUD:
-            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez <b>PAPPERS_API_KEY</b> dans <b>Settings → Secrets</b> (menu Manage app en bas a droite)."
+            _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <b>PAPPERS_API_KEY</b> dans <b>Settings -> Secrets</b> (menu Manage app en bas a droite)."
         else:
-            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier <code>.env</code>."
+            _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier <code>.env</code>."
         st.markdown('<div class="warn-box">{}</div>'.format(_msg), unsafe_allow_html=True)
     if not GMAPS_KEY and not SERPAPI_KEY:
-        st.markdown('<div class="warn-box">Aucune cle Maps → le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="warn-box">Aucune cle Maps -> le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
 
     uploaded = st.file_uploader("Deposez votre fichier Excel ou CSV", type=["xlsx","xls","csv"])
 
@@ -1358,58 +1358,71 @@ if "📂 Enrichissement Dataset" in page:
         max_rows = st.number_input("Nb max de lignes a enrichir", 1, len(df_in), min(20, len(df_in)))
 
         if st.button("Lancer l'enrichissement", use_container_width=True):
-            df_out    = df_in.copy()
-            to_enrich = df_out[df_out.isna().any(axis=1)].head(max_rows)
+            # Fix : convertir toutes les colonnes en object (string) avant enrichissement
+            # pour eviter TypeError quand on assigne un SIREN string dans une colonne float64
+            df_out    = df_in.copy().astype(object)
+            to_enrich = df_out[df_in.isna().any(axis=1)].head(max_rows)
             progress  = st.progress(0)
             status    = st.empty()
             log_area  = st.empty()
             all_logs  = []
             n         = len(to_enrich)
+            enriched_rows = []  # Collecter les lignes enrichies
 
             for i, (idx, row) in enumerate(to_enrich.iterrows()):
                 name = str(row.get("Account Name","") or "")[:45]
                 status.markdown("**Enrichissement** `{}` ({}/{})".format(name, i+1, n))
                 progress.progress((i+1)/n)
-                enriched, logs = enrich_row(row)
-                df_out.loc[idx] = enriched
 
-                # Log colore par statut
-                sirene_ok = "OK" in logs["Sirene"]
-                pappers_ok = "OK" in logs["Pappers"]
-                mag_ok = "OK" in logs["Magasins"]
-                log_line = "[{:03d}/{}] {:<45} | Sirene: {} | Pappers: {} | Magasins: {}".format(
+                try:
+                    enriched, logs = enrich_row(row)
+                    enriched_rows.append((idx, enriched))
+                    # Mise a jour immediate de df_out avec conversion string propre
+                    for col, val in enriched.items():
+                        if col in df_out.columns:
+                            df_out.at[idx, col] = str(val) if val is not None else None
+                        else:
+                            df_out.at[idx, col] = val
+                except Exception as e:
+                    logs = {"Sirene": "Erreur: {}".format(str(e)[:40]),
+                            "Pappers": "Non appele", "Magasins": "Non appele"}
+
+                log_line = "[{:03d}/{}] {:<40} | S: {} | P: {} | M: {}".format(
                     i+1, n, name,
-                    logs["Sirene"][:50],
-                    logs["Pappers"][:60],
-                    logs["Magasins"][:60],
+                    logs["Sirene"][:45],
+                    logs["Pappers"][:45],
+                    logs["Magasins"][:45],
                 )
                 all_logs.append(log_line)
                 log_area.markdown(
-                    '<div class="log-box">' + "<br>".join(all_logs[-12:]) + "</div>",
+                    '<div class="log-box">' + "<br>".join(all_logs[-10:]) + "</div>",
                     unsafe_allow_html=True)
-                time.sleep(1.5)
+                # Delai reduit : 0.5s suffisant, les API prennent deja du temps
+                time.sleep(0.5)
 
-            status.markdown("**Enrichissement termine**")
+            status.markdown("**Enrichissement termine !**")
             progress.progress(1.0)
-            pct_ap = (1 - df_out.isna().mean().mean()) * 100
+            pct_ap = (1 - df_out.replace("None", None).isnull().mean().mean()) * 100
 
             c1,c2,c3 = st.columns(3)
             c1.metric("Completude avant", "{:.1f}%".format(pct_av))
             c2.metric("Completude apres", "{:.1f}%".format(pct_ap), delta="+{:.1f}%".format(pct_ap-pct_av))
             c3.metric("Lignes traitees", n)
 
+            # Nettoyer les "None" string avant affichage
+            df_display = df_out.replace("None", "").replace("nan", "")
             st.markdown('<div class="section-title">Resultats enrichis</div>', unsafe_allow_html=True)
-            st.dataframe(df_out, use_container_width=True, height=380)
-            st.session_state.df_prospects = df_out
+            st.dataframe(df_display, use_container_width=True, height=380)
+            st.session_state.df_prospects = df_display
 
             st.download_button("Telecharger le fichier enrichi (.xlsx)",
-                data=to_excel(df_out),
+                data=to_excel(df_display),
                 file_name="leads_enrichis_{}.xlsx".format(datetime.now().strftime("%Y%m%d_%H%M")),
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
     else:
         st.markdown("""<div style="text-align:center;padding:3rem;background:#f8fafc;border-radius:12px;border:2px dashed #cbd5e1;margin-top:1rem">
-            <div style="font-size:2.5rem">📁</div>
+            <div style="font-size:2.5rem">_</div>
             <h3 style="color:#64748b;font-weight:600">Deposez votre fichier ici</h3>
             <p style="color:#94a3b8">Excel (.xlsx, .xls) ou CSV acceptes</p>
         </div>""", unsafe_allow_html=True)
@@ -1418,9 +1431,9 @@ if "📂 Enrichissement Dataset" in page:
 # PAGE 2 - PROSPECTION FROM SCRATCH
 # ==================================================================
 
-elif "🔍 Prospection From Scratch" in page:
+elif "Prospection From Scratch" in page:
     st.markdown("""<div class="main-header">
-        <h1>Cegid Retail — <span class="accent">Prospection</span></h1>
+        <h1>Cegid Retail - <span class="accent">Prospection</span></h1>
         <p>Generation d'une liste de prospects retail France depuis zero</p>
     </div>""", unsafe_allow_html=True)
 
@@ -1446,9 +1459,9 @@ elif "🔍 Prospection From Scratch" in page:
                                         params={"q":"decathlon","per_page":1}, headers=HEADERS, timeout=8)
                     if resp.status_code == 200:
                         d = resp.json()
-                        st.success("API Sirene OK — {:,} resultats disponibles dans la base".format(d.get("total_results",0)))
+                        st.success("API Sirene OK - {:,} resultats disponibles dans la base".format(d.get("total_results",0)))
                     else:
-                        st.error("API HTTP {} — verifie ta connexion".format(resp.status_code))
+                        st.error("API HTTP {} - verifie ta connexion".format(resp.status_code))
                 except Exception as e:
                     st.error("Connexion impossible: {}".format(e))
 
@@ -1497,10 +1510,10 @@ elif "🔍 Prospection From Scratch" in page:
 # PAGE 3 - SCORING & TOP 100
 # ==================================================================
 
-elif "🏆 Scoring & Top 100" in page:
+elif "Scoring & Top 100" in page:
     st.markdown("""<div class="main-header">
-        <h1>Cegid Retail — <span class="accent">Scoring & Top 100</span></h1>
-        <p>Priorisation des prospects · Framework McKinsey Fit / Timing</p>
+        <h1>Cegid Retail - <span class="accent">Scoring & Top 100</span></h1>
+        <p>Priorisation des prospects _ Framework McKinsey Fit / Timing</p>
     </div>""", unsafe_allow_html=True)
 
     with st.expander("Methodologie de scoring (cliquez pour voir)", expanded=False):
@@ -1517,7 +1530,7 @@ elif "🏆 Scoring & Top 100" in page:
 | TIMING | Qualite du lead (nb champs remplis sur 6 cles) | 10 pts |
 | TIMING | Dirigeant identifie / CA connu | 10 pts |
 
-**Grades :** A (>=75) Priorite 1 — B (>=55) Priorite 2 — C (>=35) Priorite 3 — D (<35) Hors scope
+**Grades :** A (>=75) Priorite 1 - B (>=55) Priorite 2 - C (>=35) Priorite 3 - D (<35) Hors scope
         """)
 
     source = st.radio("Source des donnees", ["Prospection (Page 2)","Uploader un fichier"], horizontal=True)
@@ -1556,7 +1569,7 @@ elif "🏆 Scoring & Top 100" in page:
             with c4: st.markdown('<div class="metric-card"><div class="label">Hors scope</div><div class="value" style="color:#991b1b">{}</div></div>'.format(n_d), unsafe_allow_html=True)
             with c5: st.markdown('<div class="metric-card"><div class="label">Score moyen</div><div class="value">{:.0f}/100</div></div>'.format(df_s["Score Total"].mean()), unsafe_allow_html=True)
 
-            # Répartition par produit recommandé
+            # Repartition par produit recommande
             if "Produit Recommande" in df_s.columns:
                 st.markdown('<div class="section-title">Repartition par produit Cegid recommande</div>', unsafe_allow_html=True)
                 cp1, cp2 = st.columns(2)
@@ -1582,7 +1595,7 @@ elif "🏆 Scoring & Top 100" in page:
                 st.caption("Repartition des scores par tranche")
 
             # Top N
-            st.markdown('<div class="section-title">Top {} — comptes a contacter en priorite</div>'.format(top_n), unsafe_allow_html=True)
+            st.markdown('<div class="section-title">Top {} - comptes a contacter en priorite</div>'.format(top_n), unsafe_allow_html=True)
             disp_cols = [c for c in [
                          "Account Name","Ville","Region","Industry Label",
                          "Nb Etablissements","Effectifs","Annual Revenue","Dirigeant",
@@ -1611,14 +1624,14 @@ elif "🏆 Scoring & Top 100" in page:
 # PAGE 4 - ANALYSE BUSINESS
 # ==================================================================
 
-elif "📊 Analyse Business" in page:
+elif "Analyse Business" in page:
     st.markdown("""<div class="main-header">
-        <h1>Cegid Retail — <span class="accent">Analyse Business</span></h1>
-        <p>Insights strategiques sur le marche adressable · Mode consultant McKinsey</p>
+        <h1>Cegid Retail - <span class="accent">Analyse Business</span></h1>
+        <p>Insights strategiques sur le marche adressable _ Mode consultant McKinsey</p>
     </div>""", unsafe_allow_html=True)
 
-    # Priorité : df_scored (scoré) > df_prospects (brut)
-    # Ne pas utiliser "or" avec des DataFrames pandas → ValueError
+    # Priorite : df_scored (score) > df_prospects (brut)
+    # Ne pas utiliser "or" avec des DataFrames pandas -> ValueError
     if st.session_state.df_scored is not None:
         df_ana = st.session_state.df_scored
     elif st.session_state.df_prospects is not None:
@@ -1637,7 +1650,7 @@ elif "📊 Analyse Business" in page:
 
     if df_ana is not None and not df_ana.empty:
         # KPIs globaux
-        st.markdown('<div class="section-title">Marche adressable — vue d\'ensemble</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Marche adressable - vue d\'ensemble</div>', unsafe_allow_html=True)
         nb_etab_series = pd.to_numeric(df_ana["Nb Etablissements"] if "Nb Etablissements" in df_ana.columns else pd.Series(dtype=float), errors="coerce")
         c1,c2,c3,c4,c5 = st.columns(5)
         with c1: st.markdown('<div class="metric-card"><div class="label">Prospects total</div><div class="value">{:,}</div></div>'.format(len(df_ana)), unsafe_allow_html=True)
@@ -1727,27 +1740,27 @@ elif "📊 Analyse Business" in page:
             score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if (n_a > 0 and "Score Total" in df_ana.columns) else 0
             etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if (n_a > 0 and "Nb Etablissements" in df_ana.columns) else 0
 
-            # Calculer répartition par produit
+            # Calculer repartition par produit
             prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
             seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
 
             st.markdown("""
 <div class="info-box">
-<strong>Insights strategiques — recommandations McKinsey</strong><br><br>
+<strong>Insights strategiques - recommandations McKinsey</strong><br><br>
 
 <b>Marche adressable prioritaire :</b> {n_a} comptes Grade A (Priorite 1) et {n_b} Grade B (Priorite 2),
 soit {total} comptes a traiter en priorite.<br><br>
 
 <b>Segmentation selon les regles officielles Cegid :</b><br>
-- Segment S (5-19 magasins) → Cegid Retail Y2, interlocuteur : Directeur General<br>
-- Segment M (20-99 magasins) → Y2 + Store Excellence, interlocuteur : DSI + Direction Retail<br>
-- Segment L/XL (100+ magasins) → Y2 + Store Excellence, interlocuteur : DSI + CTO + VP Retail<br><br>
+- Segment S (5-19 magasins) -> Cegid Retail Y2, interlocuteur : Directeur General<br>
+- Segment M (20-99 magasins) -> Y2 + Store Excellence, interlocuteur : DSI + Direction Retail<br>
+- Segment L/XL (100+ magasins) -> Y2 + Store Excellence, interlocuteur : DSI + CTO + VP Retail<br><br>
 
 <b>Profil type Grade A :</b> score moyen {score:.0f}/100, reseau moyen {etab:.0f} etablissements.<br><br>
 
-<b>Secteur dominant Grade A :</b> {sect} — concentrer les kits de prospection sur ce secteur.<br>
+<b>Secteur dominant Grade A :</b> {sect} - concentrer les kits de prospection sur ce secteur.<br>
 
-<b>Region prioritaire :</b> {reg} — fort potentiel, a couvrir en priorite.<br><br>
+<b>Region prioritaire :</b> {reg} - fort potentiel, a couvrir en priorite.<br><br>
 
 <b>Recommandation :</b> Prioriser les comptes M/L/XL (20+ magasins) qui representent
 le meilleur ratio effort/ARR pour Cegid. Les comptes S (5-19 magasins) sont qualifies
