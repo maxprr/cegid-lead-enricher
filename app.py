@@ -1319,6 +1319,15 @@ with st.sidebar:
 # PAGE 1 - ENRICHISSEMENT DATASET
 # ==================================================================
 
+def _get_store_col(df):
+    """Priorite : No. of Stores > Nb Etablissements (proxy moins precis)."""
+    if "No. of Stores" in df.columns and pd.to_numeric(df["No. of Stores"], errors="coerce").notna().sum() > 0:
+        return "No. of Stores"
+    if "Nb Etablissements" in df.columns:
+        return "Nb Etablissements"
+    return None
+
+
 try:
     if "Enrichissement Dataset" in page:
         st.markdown("""<div class="main-header">
@@ -1359,7 +1368,13 @@ try:
             if st.button("Lancer l'enrichissement", use_container_width=True, key="btn_enrich"):
                 # Fix : convertir toutes les colonnes en object (string) avant enrichissement
                 # pour eviter TypeError quand on assigne un SIREN string dans une colonne float64
-                df_out    = df_in.copy().astype(object)
+                # Forcer object dtype sur chaque colonne individuellement
+            df_out = df_in.copy()
+            for _col in df_out.columns:
+                try:
+                    df_out[_col] = df_out[_col].where(df_out[_col].isna(), df_out[_col].astype(str))
+                except Exception:
+                    df_out[_col] = df_out[_col].astype(object)
                 to_enrich = df_out[df_in.isna().any(axis=1)].head(max_rows)
                 progress  = st.progress(0)
                 status    = st.empty()
@@ -1376,12 +1391,23 @@ try:
                     try:
                         enriched, logs = enrich_row(row)
                         enriched_rows.append((idx, enriched))
-                        # Mise a jour immediate de df_out avec conversion string propre
+                        # Mise a jour colonne par colonne
+                        # Tout convertir en string pour eviter TypeError float64
                         for col, val in enriched.items():
-                            if col in df_out.columns:
-                                df_out.at[idx, col] = str(val) if val is not None else None
+                            # Convertir en string sauf None/NaN
+                            if val is None or (isinstance(val, float) and val != val):
+                                safe_val = None
                             else:
-                                df_out.at[idx, col] = val
+                                safe_val = str(val)
+                            try:
+                                if col in df_out.columns:
+                                    df_out.at[idx, col] = safe_val
+                                else:
+                                    # Nouvelle colonne : creer en object dtype
+                                    df_out[col] = df_out[col].astype(object) if col in df_out.columns else None
+                                    df_out.at[idx, col] = safe_val
+                            except Exception:
+                                pass  # Ignorer les colonnes non assignables
                     except Exception as e:
                         logs = {"Sirene": "Erreur: {}".format(str(e)[:40]),
                                 "Pappers": "Non appele", "Magasins": "Non appele"}
@@ -1650,11 +1676,12 @@ try:
         if df_ana is not None and not df_ana.empty:
             # KPIs globaux
             st.markdown('<div class="section-title">Marche adressable - vue d\'ensemble</div>', unsafe_allow_html=True)
-            nb_etab_series = pd.to_numeric(df_ana["Nb Etablissements"] if "Nb Etablissements" in df_ana.columns else pd.Series(dtype=float), errors="coerce")
+            _store_col = _get_store_col(df_ana)
+            _store_series = pd.to_numeric(df_ana[_store_col], errors="coerce") if _store_col else pd.Series(dtype=float)
             c1,c2,c3,c4,c5 = st.columns(5)
             with c1: st.markdown('<div class="metric-card"><div class="label">Prospects total</div><div class="value">{:,}</div></div>'.format(len(df_ana)), unsafe_allow_html=True)
-            with c2: st.markdown('<div class="metric-card"><div class="label">Total etablissements</div><div class="value">{:,}</div></div>'.format(int(nb_etab_series.sum())), unsafe_allow_html=True)
-            with c3: st.markdown('<div class="metric-card"><div class="label">Mediane reseau</div><div class="value">{:.0f}</div></div>'.format(nb_etab_series.median()), unsafe_allow_html=True)
+            with c2: st.markdown('<div class="metric-card"><div class="label">Total magasins</div><div class="value">{:,}</div></div>'.format(int(_store_series.sum()) if not _store_series.empty else 0), unsafe_allow_html=True)
+            with c3: st.markdown('<div class="metric-card"><div class="label">Mediane reseau</div><div class="value">{:.0f}</div></div>'.format(_store_series.median() if not _store_series.empty else 0), unsafe_allow_html=True)
             region_col = "Region" if "Region" in df_ana.columns else "Billing Country"
             with c4: st.markdown('<div class="metric-card"><div class="label">Regions couvertes</div><div class="value">{}</div></div>'.format(df_ana[region_col].nunique() if region_col in df_ana.columns else "N/A"), unsafe_allow_html=True)
             with c5:
@@ -1755,13 +1782,14 @@ try:
                         if len(vc2): top_reg = vc2.index[0]
 
                 score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if (n_a > 0 and "Score Total" in df_ana.columns) else 0
-                etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if (n_a > 0 and "Nb Etablissements" in df_ana.columns) else 0
+                _sc4 = _get_store_col(df_ana)
+            stores_moyen_a = pd.to_numeric(df_ana[df_ana["Grade"]=="A"][_sc4], errors="coerce").mean() if (n_a > 0 and _sc4) else 0
 
                 # Calculer repartition par produit
-                prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
-                seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
+            prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
+            seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
 
-                st.markdown("""
+            st.markdown("""
     <div class="info-box">
     <strong>Insights strategiques - recommandations McKinsey</strong><br><br>
 
@@ -1784,9 +1812,9 @@ try:
     mais necessite un cycle de vente plus court avec acces direct au DG.
     </div>""".format(
                     n_a=n_a, n_b=n_b, total=n_a+n_b,
-                    score=score_moyen_a, etab=etab_moyen_a,
+                    score=score_moyen_a, etab=stores_moyen_a,
                     sect=top_sect, reg=top_reg,
-                ), unsafe_allow_html=True)
+            ), unsafe_allow_html=True)
 
             # Export
             st.markdown('<div class="section-title">Export du rapport</div>', unsafe_allow_html=True)
