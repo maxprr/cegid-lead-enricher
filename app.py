@@ -33,61 +33,130 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
-/* Force thème clair — override dark mode navigateur/Streamlit */
-html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
-.main, .block-container, [class*="css"] {
+
+/* ── Base : thème clair forcé ────────────────────────────────── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+.main, .block-container {
     background-color: #FFFFFF !important;
+    font-family: 'DM Sans', sans-serif !important;
+}
+
+/* ── Texte général : sombre sur fond clair ───────────────────── */
+.stMarkdown, .stMarkdown p, .stMarkdown li,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] span {
     color: #0D1F3C !important;
+    font-family: 'DM Sans', sans-serif !important;
 }
-[data-testid="stAppViewContainer"] > .main {
-    background-color: #FFFFFF !important;
+
+/* ── Sidebar : gradient bleu, texte blanc ────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #0d1f3c 0%, #003082 100%) !important;
 }
-html,body,[class*="css"]{font-family:'DM Sans',sans-serif!important}
-[data-testid="stSidebar"]{background:linear-gradient(180deg,#0d1f3c 0%,#003082 100%) !important}
-[data-testid="stSidebar"] * {color:white !important}
-[data-testid="stSidebar"] p {color:white !important}
-[data-testid="stSidebar"] span {color:white !important}
-[data-testid="stSidebar"] label {color:white !important}
-[data-testid="stSidebar"] div {color:white !important}
-[data-testid="stSidebar"] li {color:white !important}
-[data-testid="stSidebar"] a {color:white !important}
-[data-testid="stSidebar"] small {color:white !important}
-[data-testid="stSidebar"] .stMarkdown {color:white !important}
-[data-testid="stSidebar"] .stMarkdown p {color:white !important}
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {color:white !important}
-[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {color:white !important}
-.main-header{background:linear-gradient(135deg,#003082,#1a4fa8);padding:1.8rem 2.5rem;border-radius:16px;margin-bottom:1.5rem;color:white;position:relative;overflow:hidden}
-.main-header::before{content:'';position:absolute;top:-50%;right:-5%;width:280px;height:280px;background:rgba(255,107,53,.12);border-radius:50%}
-.main-header h1{font-size:1.9rem;font-weight:700;margin:0}
-.main-header p{opacity:.8;margin:.4rem 0 0;font-size:.95rem}
-.accent{color:#FF6B35}
-.metric-card{background:#ffffff !important;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,48,130,.08);border-left:4px solid #003082;margin-bottom:.8rem}
-.metric-card .label{font-size:.72rem;color:#64748b !important;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-.metric-card .value{font-size:1.9rem;font-weight:700;color:#003082 !important;font-family:'DM Mono',monospace}
-/* Force couleur texte général — hors header et sidebar */
-p, span, li, td, th, label { color: #0D1F3C !important; }
-h1, h2, h3, h4 { color: #003082 !important; }
-.stMarkdown p { color: #0D1F3C !important; }
-/* Exception : header principal → toujours blanc */
-.main-header h1, .main-header h2, .main-header p,
-.main-header span, .main-header * { color: white !important; }
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] li,
+[data-testid="stSidebar"] a,
+[data-testid="stSidebar"] div,
+[data-testid="stSidebar"] small,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {
+    color: white !important;
+}
+
+/* ── Header principal (div.main-header) ──────────────────────── */
+.main-header {
+    background: linear-gradient(135deg, #003082, #1a4fa8);
+    padding: 1.8rem 2.5rem;
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.main-header::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -5%;
+    width: 280px; height: 280px;
+    background: rgba(255,107,53,.12);
+    border-radius: 50%;
+}
+.main-header h1,
+.main-header h2,
+.main-header p,
+.main-header span,
+.main-header div {
+    color: white !important;
+}
 .main-header .accent { color: #FF6B35 !important; }
-.section-title{font-size:1.05rem;font-weight:700;color:#003082;border-bottom:2px solid #FF6B35;padding-bottom:.4rem;margin:1.4rem 0 .9rem;display:inline-block}
-.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#1e40af}
-.warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#92400e}
-.log-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.7rem 1rem;font-family:'DM Mono',monospace;font-size:.76rem;color:#475569;max-height:240px;overflow-y:auto;line-height:1.6}
-.stButton>button{background:#003082!important;color:white!important;border:none!important;border-radius:8px!important;font-weight:600!important;transition:all .2s!important}
-.stButton>button *{color:white!important}
-.stButton>button p{color:white!important}
-.stButton>button span{color:white!important}
-.stButton>button:hover{background:#FF6B35!important;color:white!important;transform:translateY(-1px)}
-.stButton>button:hover *{color:white!important}
-/* Forcer blanc sur tous les boutons Streamlit peu importe la variante */
-button[kind="primary"], button[kind="secondary"] {color:white!important}
-button[kind="primary"] *, button[kind="secondary"] * {color:white!important}
-div[data-testid="stButton"] button {color:white!important}
-div[data-testid="stButton"] button p {color:white!important}
-.stProgress>div>div{background:#FF6B35!important}
+
+/* ── Section titles ──────────────────────────────────────────── */
+.section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #003082 !important;
+    border-bottom: 2px solid #FF6B35;
+    padding-bottom: .4rem;
+    margin: 1.4rem 0 .9rem;
+    display: inline-block;
+}
+
+/* ── Metric cards ────────────────────────────────────────────── */
+.metric-card {
+    background: #ffffff !important;
+    border-radius: 12px;
+    padding: 1.1rem 1.4rem;
+    box-shadow: 0 2px 8px rgba(0,48,130,.08);
+    border-left: 4px solid #003082;
+    margin-bottom: .8rem;
+}
+.metric-card .label { font-size:.72rem; color:#64748b !important; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+.metric-card .value { font-size:1.9rem; font-weight:700; color:#003082 !important; font-family:'DM Mono',monospace; }
+
+/* ── Info / Warn boxes ───────────────────────────────────────── */
+.info-box {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 10px; padding: .9rem 1.1rem;
+    margin: .8rem 0; font-size: .88rem; color: #1e40af !important;
+}
+.warn-box {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 10px; padding: .9rem 1.1rem;
+    margin: .8rem 0; font-size: .88rem; color: #92400e !important;
+}
+.log-box {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 8px; padding: .7rem 1rem;
+    font-family: 'DM Mono', monospace; font-size: .76rem;
+    color: #475569 !important; max-height: 240px; overflow-y: auto; line-height: 1.6;
+}
+
+/* ── Boutons Cegid : UNIQUEMENT les stButton (pas upload, pas download) ── */
+div[data-testid="stButton"] > button {
+    background: #003082 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all .2s !important;
+}
+div[data-testid="stButton"] > button:hover {
+    background: #FF6B35 !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+div[data-testid="stButton"] > button p,
+div[data-testid="stButton"] > button span {
+    color: white !important;
+}
+
+/* ── Progress bar ────────────────────────────────────────────── */
+.stProgress > div > div { background: #FF6B35 !important; }
 </style>
 """, unsafe_allow_html=True)
 
