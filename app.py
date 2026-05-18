@@ -838,16 +838,25 @@ def enrich_row(row):
 # ══════════════════════════════════════════════════════════════════
 
 def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
+    """
+    Prospection via API Sirene. 
+    Stratégie : collecter max_results * 3 résultats bruts avant déduplication
+    pour compenser les pertes dues au filtrage et à la déduplication.
+    """
     results, seen = [], set()
-    region_code   = REGIONS_INSEE.get(region) if region and region != "Toutes les regions" else None
-    url           = "https://recherche-entreprises.api.gouv.fr/search"
-    errors, prog  = [], st.empty()
+    # Collecter beaucoup plus que demandé avant dédup
+    collect_target = max_results * 4
+    region_code    = REGIONS_INSEE.get(region) if region and region != "Toutes les regions" else None
+    url            = "https://recherche-entreprises.api.gouv.fr/search"
+    errors, prog   = [], st.empty()
 
     for i, naf in enumerate(naf_codes):
-        if len(results) >= max_results: break
+        if len(results) >= collect_target: break
         query = NAF_QUERIES.get(naf, "commerce detail")
-        prog.caption("Recherche {} ({}/{}) — {} trouves...".format(naf, i+1, len(naf_codes), len(results)))
-        for page in range(1, 5):
+        prog.caption("Recherche {} ({}/{}) — {} bruts collectes...".format(
+            naf, i+1, len(naf_codes), len(results)))
+
+        for page in range(1, 10):  # Jusqu'à 10 pages par NAF
             try:
                 params = {"q": query, "per_page": 25, "page": page}
                 if region_code: params["region"] = region_code
@@ -860,6 +869,7 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
                 data  = resp.json()
                 items = data.get("results", [])
                 if not items: break
+
                 for c in items:
                     siren = c.get("siren","")
                     if not siren or siren in seen: continue
@@ -869,81 +879,76 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
                     s  = c.get("siege", {}); cp = s.get("code_postal","")
                     seen.add(siren)
                     results.append({
-                        "Account Name":    c.get("nom_complet") or c.get("nom_raison_sociale",""),
-                        "National ID":     siren,
-                        "SIRET Siege":     s.get("siret",""),
-                        "Industry Code":   s.get("activite_principale","") or naf,
-                        "Industry Label":  NAF_RETAIL.get(s.get("activite_principale","") or naf, NAF_RETAIL.get(naf,"")),
-                        "Billing Country": "France",
-                        "Adresse Siege":   s.get("adresse",""),
-                        "Code Postal":     cp,
-                        "Ville":           s.get("libelle_commune",""),
-                        "Region":          s.get("libelle_region","") or dept_to_region(cp) or (region if region and region != "Toutes les regions" else ""),
+                        "Account Name":     c.get("nom_complet") or c.get("nom_raison_sociale",""),
+                        "National ID":      siren,
+                        "SIRET Siege":      s.get("siret",""),
+                        "Industry Code":    s.get("activite_principale","") or naf,
+                        "Industry Label":   NAF_RETAIL.get(s.get("activite_principale","") or naf, NAF_RETAIL.get(naf,"")),
+                        "Billing Country":  "France",
+                        "Adresse Siege":    s.get("adresse",""),
+                        "Code Postal":      cp,
+                        "Ville":            s.get("libelle_commune",""),
+                        "Region":           s.get("libelle_region","") or dept_to_region(cp) or (region if region and region != "Toutes les regions" else ""),
                         "Nb Etablissements":nb,
-                        "No. of Stores":   None,
-                        "Annual Revenue":  None,
-                        "Effectifs":       TRANCHES_EFF.get(str(c.get("tranche_effectif_salarie") or ""),""),
-                        "Dirigeant":       None,
-                        "Source":          "API Sirene / data.gouv.fr",
-                        "Date extraction": datetime.now().strftime("%Y-%m-%d"),
+                        "No. of Stores":    None,
+                        "Annual Revenue":   None,
+                        "Effectifs":        TRANCHES_EFF.get(str(c.get("tranche_effectif_salarie") or ""),""),
+                        "Dirigeant":        None,
+                        "Source":           "API Sirene / data.gouv.fr",
+                        "Date extraction":  datetime.now().strftime("%Y-%m-%d"),
                     })
-                    if len(results) >= max_results: break
+                    if len(results) >= collect_target: break
+
                 total = data.get("total_results", 0)
-                if page * 25 >= min(total, 100): break
-                time.sleep(0.4)
+                if page * 25 >= min(total, 250): break  # Max 250 par NAF
+                time.sleep(0.3)
+
             except Exception as e:
                 errors.append("NAF {} p{}: {}".format(naf, page, str(e)[:50])); break
-        if len(results) >= max_results: break
+
+        if len(results) >= collect_target: break
 
     prog.empty()
     if errors:
         with st.expander("Erreurs API ({})".format(len(errors)), expanded=False):
             for e in errors[:10]: st.caption(e)
+
     if not results: return pd.DataFrame()
+
     df = pd.DataFrame(results)
 
-    # ── Déduplication en 3 passes ──────────────────────────────────────────────
-    # Passe 1 : SIREN exact (cas simple)
+    # ── Déduplication passe 1 : SIREN exact ──────────────────────────────────
+    n_avant = len(df)
     df = df.drop_duplicates(subset=["National ID"], keep="first")
 
-    # Passe 2 : Nom normalisé — regrouper les filiales d'une même enseigne
-    # Ex: "ORCHESTRA SAS", "ORCHESTRA PARIS", "LES CONTINES ORCHESTRA" → garder la plus grande
+    # ── Déduplication passe 2 : Nom normalisé (groupes/filiales) ─────────────
     def normalize_name(name):
-        """Extrait le nom commercial principal pour déduplication."""
         if not name: return ""
         n = str(name).upper().strip()
-        # Supprimer formes juridiques
-        for suffix in [" SAS"," SA"," SARL"," SNC"," SASU"," SCM"," SCI",
-                       " GIE"," FRANCE"," BOUTIQUES"," STORES"," SHOP"," RETAIL"]:
+        for suffix in [" SAS"," SA"," SARL"," SNC"," SASU"," GIE",
+                       " FRANCE"," BOUTIQUES"," STORES"," SHOP"," RETAIL"," GROUP"," GROUPE"]:
             n = n.replace(suffix, "")
-        # Supprimer articles et prépositions en DEBUT de nom
-        SKIP_WORDS = {"LES","LE","LA","L","DE","DU","DES","ET","THE","NEW",
-                      "LTD","INC","STE","CIE","ETS","SOC","SARL","SAS"}
-        words = [w for w in n.strip().split() if w and len(w) >= 2 and w not in SKIP_WORDS]
+        SKIP = {"LES","LE","LA","DE","DU","DES","ET","THE","NEW","LTD","INC","STE","CIE"}
+        words = [w for w in n.strip().split() if w and len(w) >= 2 and w not in SKIP]
         return " ".join(words[:2]).strip()
 
     df["_nom_norm"] = df["Account Name"].apply(normalize_name)
-
-    # Pour chaque groupe de noms normalisés identiques, garder celui avec
-    # le plus grand nb d'établissements (= le siège / la holding du groupe)
+    # Trier par nb établissements desc avant dédup : on garde la plus grande entité
     df = (df.sort_values("Nb Etablissements", ascending=False)
             .drop_duplicates(subset=["_nom_norm"], keep="first")
             .drop(columns=["_nom_norm"])
             .reset_index(drop=True))
 
-    # Passe 3 : Similarité fuzzy légère — détecter les quasi-doublons résiduels
-    # (ex: "BERSHKA FRANCE" et "BERSHKA" → garder le plus grand)
-    names_clean = df["Account Name"].str.upper().str.strip().tolist()
+    # ── Passe 3 : fuzzy léger (nom contenu dans l'autre) ─────────────────────
+    names   = df["Account Name"].str.upper().str.strip().tolist()
     to_drop = set()
-    for i in range(len(names_clean)):
+    for i in range(min(len(names), 200)):   # Limiter à 200 pour performance
         if i in to_drop: continue
-        for j in range(i+1, min(i+20, len(names_clean))):
+        for j in range(i+1, min(i+15, len(names))):
             if j in to_drop: continue
-            a, b = names_clean[i], names_clean[j]
-            # Si l'un contient l'autre (et qu'ils ont >=4 chars)
-            short, long = (a, b) if len(a) <= len(b) else (b, a)
-            if len(short) >= 4 and short in long:
-                # Garder l'index avec le plus grand nb d'établissements
+            a, b = names[i], names[j]
+            short, long = (a,b) if len(a) <= len(b) else (b,a)
+            if len(short) >= 5 and short in long:
                 nb_i = df.iloc[i]["Nb Etablissements"] or 0
                 nb_j = df.iloc[j]["Nb Etablissements"] or 0
                 to_drop.add(j if nb_i >= nb_j else i)
@@ -951,6 +956,8 @@ def prospect_by_naf(naf_codes, region=None, min_etab=3, max_results=100):
     if to_drop:
         df = df.drop(index=list(to_drop)).reset_index(drop=True)
 
+    # Trier par nb établissements et retourner max_results
+    df = df.sort_values("Nb Etablissements", ascending=False).reset_index(drop=True)
     return df.head(max_results)
 
 # ══════════════════════════════════════════════════════════════════
