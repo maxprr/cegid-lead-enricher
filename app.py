@@ -64,10 +64,14 @@ html,body,[class*="css"]{font-family:'DM Sans',sans-serif!important}
 .metric-card{background:#ffffff !important;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,48,130,.08);border-left:4px solid #003082;margin-bottom:.8rem}
 .metric-card .label{font-size:.72rem;color:#64748b !important;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 .metric-card .value{font-size:1.9rem;font-weight:700;color:#003082 !important;font-family:'DM Mono',monospace}
-/* Force couleur texte général */
-p, span, div, li, td, th, label { color: #0D1F3C !important; }
+/* Force couleur texte général — hors header et sidebar */
+p, span, li, td, th, label { color: #0D1F3C !important; }
 h1, h2, h3, h4 { color: #003082 !important; }
 .stMarkdown p { color: #0D1F3C !important; }
+/* Exception : header principal → toujours blanc */
+.main-header h1, .main-header h2, .main-header p,
+.main-header span, .main-header * { color: white !important; }
+.main-header .accent { color: #FF6B35 !important; }
 .section-title{font-size:1.05rem;font-weight:700;color:#003082;border-bottom:2px solid #FF6B35;padding-bottom:.4rem;margin:1.4rem 0 .9rem;display:inline-block}
 .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#1e40af}
 .warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#92400e}
