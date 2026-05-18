@@ -77,7 +77,16 @@ h1, h2, h3, h4 { color: #003082 !important; }
 .warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#92400e}
 .log-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:.7rem 1rem;font-family:'DM Mono',monospace;font-size:.76rem;color:#475569;max-height:240px;overflow-y:auto;line-height:1.6}
 .stButton>button{background:#003082!important;color:white!important;border:none!important;border-radius:8px!important;font-weight:600!important;transition:all .2s!important}
-.stButton>button:hover{background:#FF6B35!important;transform:translateY(-1px)}
+.stButton>button *{color:white!important}
+.stButton>button p{color:white!important}
+.stButton>button span{color:white!important}
+.stButton>button:hover{background:#FF6B35!important;color:white!important;transform:translateY(-1px)}
+.stButton>button:hover *{color:white!important}
+/* Forcer blanc sur tous les boutons Streamlit peu importe la variante */
+button[kind="primary"], button[kind="secondary"] {color:white!important}
+button[kind="primary"] *, button[kind="secondary"] * {color:white!important}
+div[data-testid="stButton"] button {color:white!important}
+div[data-testid="stButton"] button p {color:white!important}
 .stProgress>div>div{background:#FF6B35!important}
 </style>
 """, unsafe_allow_html=True)
