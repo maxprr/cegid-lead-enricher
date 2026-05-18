@@ -33,17 +33,30 @@ st.set_page_config(
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+/* Force thème clair — override dark mode navigateur/Streamlit */
+html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+.main, .block-container, [class*="css"] {
+    background-color: #FFFFFF !important;
+    color: #0D1F3C !important;
+}
+[data-testid="stAppViewContainer"] > .main {
+    background-color: #FFFFFF !important;
+}
 html,body,[class*="css"]{font-family:'DM Sans',sans-serif!important}
-[data-testid="stSidebar"]{background:linear-gradient(180deg,#0d1f3c 0%,#003082 100%)}
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#0d1f3c 0%,#003082 100%) !important}
 [data-testid="stSidebar"] *{color:white!important}
 .main-header{background:linear-gradient(135deg,#003082,#1a4fa8);padding:1.8rem 2.5rem;border-radius:16px;margin-bottom:1.5rem;color:white;position:relative;overflow:hidden}
 .main-header::before{content:'';position:absolute;top:-50%;right:-5%;width:280px;height:280px;background:rgba(255,107,53,.12);border-radius:50%}
 .main-header h1{font-size:1.9rem;font-weight:700;margin:0}
 .main-header p{opacity:.8;margin:.4rem 0 0;font-size:.95rem}
 .accent{color:#FF6B35}
-.metric-card{background:white;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,48,130,.08);border-left:4px solid #003082;margin-bottom:.8rem}
-.metric-card .label{font-size:.72rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
-.metric-card .value{font-size:1.9rem;font-weight:700;color:#003082;font-family:'DM Mono',monospace}
+.metric-card{background:#ffffff !important;border-radius:12px;padding:1.1rem 1.4rem;box-shadow:0 2px 8px rgba(0,48,130,.08);border-left:4px solid #003082;margin-bottom:.8rem}
+.metric-card .label{font-size:.72rem;color:#64748b !important;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+.metric-card .value{font-size:1.9rem;font-weight:700;color:#003082 !important;font-family:'DM Mono',monospace}
+/* Force couleur texte général */
+p, span, div, li, td, th, label { color: #0D1F3C !important; }
+h1, h2, h3, h4 { color: #003082 !important; }
+.stMarkdown p { color: #0D1F3C !important; }
 .section-title{font-size:1.05rem;font-weight:700;color:#003082;border-bottom:2px solid #FF6B35;padding-bottom:.4rem;margin:1.4rem 0 .9rem;display:inline-block}
 .info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#1e40af}
 .warn-box{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:.9rem 1.1rem;margin:.8rem 0;font-size:.88rem;color:#92400e}
@@ -1133,7 +1146,12 @@ if "📂 Enrichissement Dataset" in page:
     </div>""", unsafe_allow_html=True)
 
     if not PAPPERS_KEY:
-        st.markdown('<div class="warn-box">Cle Pappers absente → CA et dirigeants ne seront pas recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier .env puis relancez l\'application.</div>', unsafe_allow_html=True)
+        _on_cloud = bool(st.secrets) if hasattr(st, 'secrets') else False
+        if _on_cloud:
+            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez PAPPERS_API_KEY dans Settings → Secrets de votre app Streamlit Cloud."
+        else:
+            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez PAPPERS_API_KEY=votre_cle dans le fichier .env."
+        st.markdown('<div class="warn-box">{}</div>'.format(_msg), unsafe_allow_html=True)
     if not GMAPS_KEY and not SERPAPI_KEY:
         st.markdown('<div class="warn-box">Aucune cle Maps → le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
 
