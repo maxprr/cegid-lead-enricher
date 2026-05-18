@@ -1319,480 +1319,483 @@ with st.sidebar:
 # PAGE 1 - ENRICHISSEMENT DATASET
 # ==================================================================
 
-if "Enrichissement Dataset" in page:
-    st.markdown("""<div class="main-header">
-        <h1>Cegid Retail - <span class="accent">Enrichissement</span></h1>
-        <p>Completion automatique de votre base _ Chaque action est tracee et expliquee</p>
-    </div>""", unsafe_allow_html=True)
-
-    if not PAPPERS_KEY:
-        _on_cloud = ON_CLOUD
-        if ON_CLOUD:
-            _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <b>PAPPERS_API_KEY</b> dans <b>Settings -> Secrets</b> (menu Manage app en bas a droite)."
-        else:
-            _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier <code>.env</code>."
-        st.markdown('<div class="warn-box">{}</div>'.format(_msg), unsafe_allow_html=True)
-    if not GMAPS_KEY and not SERPAPI_KEY:
-        st.markdown('<div class="warn-box">Aucune cle Maps -> le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
-
-    uploaded = st.file_uploader("Deposez votre fichier Excel ou CSV", type=["xlsx","xls","csv"])
-
-    if uploaded:
-        try:
-            df_in = pd.read_csv(uploaded, sep=None, engine="python") if uploaded.name.endswith(".csv") else pd.read_excel(uploaded)
-        except Exception as e:
-            st.error("Erreur chargement : {}".format(e)); st.stop()
-
-        c1,c2,c3,c4 = st.columns(4)
-        pct_av = (1 - df_in.isna().mean().mean()) * 100
-        with c1: st.markdown('<div class="metric-card"><div class="label">Lignes total</div><div class="value">{:,}</div></div>'.format(len(df_in)), unsafe_allow_html=True)
-        with c2: st.markdown('<div class="metric-card"><div class="label">Completude</div><div class="value">{:.0f}%</div></div>'.format(pct_av), unsafe_allow_html=True)
-        with c3: st.markdown('<div class="metric-card"><div class="label">Lignes a enrichir</div><div class="value">{:,}</div></div>'.format(df_in.isna().any(axis=1).sum()), unsafe_allow_html=True)
-        with c4: st.markdown('<div class="metric-card"><div class="label">Colonnes incompletes</div><div class="value">{}</div></div>'.format((df_in.isna().sum()>0).sum()), unsafe_allow_html=True)
-
-        st.markdown('<div class="section-title">Apercu du fichier</div>', unsafe_allow_html=True)
-        st.dataframe(df_in.head(8), use_container_width=True, height=230)
-
-        max_rows = st.number_input("Nb max de lignes a enrichir", 1, len(df_in), min(20, len(df_in)))
-
-        if st.button("Lancer l'enrichissement", use_container_width=True):
-            # Fix : convertir toutes les colonnes en object (string) avant enrichissement
-            # pour eviter TypeError quand on assigne un SIREN string dans une colonne float64
-            df_out    = df_in.copy().astype(object)
-            to_enrich = df_out[df_in.isna().any(axis=1)].head(max_rows)
-            progress  = st.progress(0)
-            status    = st.empty()
-            log_area  = st.empty()
-            all_logs  = []
-            n         = len(to_enrich)
-            enriched_rows = []  # Collecter les lignes enrichies
-
-            for i, (idx, row) in enumerate(to_enrich.iterrows()):
-                name = str(row.get("Account Name","") or "")[:45]
-                status.markdown("**Enrichissement** `{}` ({}/{})".format(name, i+1, n))
-                progress.progress((i+1)/n)
-
-                try:
-                    enriched, logs = enrich_row(row)
-                    enriched_rows.append((idx, enriched))
-                    # Mise a jour immediate de df_out avec conversion string propre
-                    for col, val in enriched.items():
-                        if col in df_out.columns:
-                            df_out.at[idx, col] = str(val) if val is not None else None
-                        else:
-                            df_out.at[idx, col] = val
-                except Exception as e:
-                    logs = {"Sirene": "Erreur: {}".format(str(e)[:40]),
-                            "Pappers": "Non appele", "Magasins": "Non appele"}
-
-                log_line = "[{:03d}/{}] {:<40} | S: {} | P: {} | M: {}".format(
-                    i+1, n, name,
-                    logs["Sirene"][:45],
-                    logs["Pappers"][:45],
-                    logs["Magasins"][:45],
-                )
-                all_logs.append(log_line)
-                log_area.markdown(
-                    '<div class="log-box">' + "<br>".join(all_logs[-10:]) + "</div>",
-                    unsafe_allow_html=True)
-                # Delai reduit : 0.5s suffisant, les API prennent deja du temps
-                time.sleep(0.5)
-
-            status.markdown("**Enrichissement termine !**")
-            progress.progress(1.0)
-            pct_ap = (1 - df_out.replace("None", None).isnull().mean().mean()) * 100
-
-            c1,c2,c3 = st.columns(3)
-            c1.metric("Completude avant", "{:.1f}%".format(pct_av))
-            c2.metric("Completude apres", "{:.1f}%".format(pct_ap), delta="+{:.1f}%".format(pct_ap-pct_av))
-            c3.metric("Lignes traitees", n)
-
-            # Nettoyer les "None" string avant affichage
-            df_display = df_out.replace("None", "").replace("nan", "")
-            st.markdown('<div class="section-title">Resultats enrichis</div>', unsafe_allow_html=True)
-            st.dataframe(df_display, use_container_width=True, height=380)
-            st.session_state.df_prospects = df_display
-
-            st.download_button("Telecharger le fichier enrichi (.xlsx)",
-                data=to_excel(df_display),
-                file_name="leads_enrichis_{}.xlsx".format(datetime.now().strftime("%Y%m%d_%H%M")),
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True)
-    else:
-        st.markdown("""<div style="text-align:center;padding:3rem;background:#f8fafc;border-radius:12px;border:2px dashed #cbd5e1;margin-top:1rem">
-            <div style="font-size:2.5rem">_</div>
-            <h3 style="color:#64748b;font-weight:600">Deposez votre fichier ici</h3>
-            <p style="color:#94a3b8">Excel (.xlsx, .xls) ou CSV acceptes</p>
+try:
+    if "Enrichissement Dataset" in page:
+        st.markdown("""<div class="main-header">
+            <h1>Cegid Retail - <span class="accent">Enrichissement</span></h1>
+            <p>Completion automatique de votre base _ Chaque action est tracee et expliquee</p>
         </div>""", unsafe_allow_html=True)
 
-# ==================================================================
-# PAGE 2 - PROSPECTION FROM SCRATCH
-# ==================================================================
-
-elif "Prospection From Scratch" in page:
-    st.markdown("""<div class="main-header">
-        <h1>Cegid Retail - <span class="accent">Prospection</span></h1>
-        <p>Generation d'une liste de prospects retail France depuis zero</p>
-    </div>""", unsafe_allow_html=True)
-
-    st.markdown('<div class="section-title">Criteres de recherche</div>', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([2,2,1])
-    with col1:
-        naf_sel = st.multiselect("Codes NAF (secteurs retail)", list(NAF_RETAIL.keys()),
-            default=["4771Z","4772A","4777Z","4775Z","4778A"],
-            format_func=lambda x: "{} - {}".format(x, NAF_RETAIL[x]))
-    with col2:
-        region_sel = st.selectbox("Region", ["Toutes les regions"] + REGIONS_FR, index=7)
-    with col3:
-        max_res  = st.number_input("Nb max", 5, 500, 100)
-        min_etab = st.number_input("Nb min etab.", 1, 50, 5,
-                                    help="5+ etablissements = enseigne avec reseau de magasins actif")
-
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        if st.button("Tester la connexion API", use_container_width=True):
-            with st.spinner("Test..."):
-                try:
-                    resp = requests.get("https://recherche-entreprises.api.gouv.fr/search",
-                                        params={"q":"decathlon","per_page":1}, headers=HEADERS, timeout=8)
-                    if resp.status_code == 200:
-                        d = resp.json()
-                        st.success("API Sirene OK - {:,} resultats disponibles dans la base".format(d.get("total_results",0)))
-                    else:
-                        st.error("API HTTP {} - verifie ta connexion".format(resp.status_code))
-                except Exception as e:
-                    st.error("Connexion impossible: {}".format(e))
-
-    if not naf_sel:
-        st.warning("Selectionnez au moins un code NAF.")
-    else:
-        with col_btn2:
-            launch = st.button("Lancer la prospection", use_container_width=True)
-
-        if launch:
-            with st.spinner("Recherche en cours..."):
-                df_p = prospect_by_naf(naf_sel, region_sel, min_etab, max_res)
-            if df_p.empty:
-                st.error("Aucun resultat. Reduisez le filtre Nb min etablissements a 1 ou 2.")
+        if not PAPPERS_KEY:
+            _on_cloud = ON_CLOUD
+            if ON_CLOUD:
+                _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <b>PAPPERS_API_KEY</b> dans <b>Settings -> Secrets</b> (menu Manage app en bas a droite)."
             else:
-                st.session_state.df_prospects = df_p
-                st.session_state.df_scored    = None
+                _msg = "Cle Pappers absente -> CA et dirigeants non recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier <code>.env</code>."
+            st.markdown('<div class="warn-box">{}</div>'.format(_msg), unsafe_allow_html=True)
+        if not GMAPS_KEY and not SERPAPI_KEY:
+            st.markdown('<div class="warn-box">Aucune cle Maps -> le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
 
-        # Afficher depuis session_state : persiste apres navigation entre pages
-        if st.session_state.df_prospects is not None:
-            df_p = st.session_state.df_prospects
+        uploaded = st.file_uploader("Deposez votre fichier Excel ou CSV", type=["xlsx","xls","csv"])
+
+        if uploaded:
+            try:
+                df_in = pd.read_csv(uploaded, sep=None, engine="python") if uploaded.name.endswith(".csv") else pd.read_excel(uploaded)
+            except Exception as e:
+                st.error("Erreur chargement : {}".format(e)); st.stop()
+
             c1,c2,c3,c4 = st.columns(4)
-            with c1: st.markdown('<div class="metric-card"><div class="label">Prospects</div><div class="value">{:,}</div></div>'.format(len(df_p)), unsafe_allow_html=True)
-            with c2: st.markdown('<div class="metric-card"><div class="label">Nb etab. median</div><div class="value">{:.0f}</div></div>'.format(pd.to_numeric(df_p["Nb Etablissements"],errors="coerce").median()), unsafe_allow_html=True)
-            with c3: st.markdown('<div class="metric-card"><div class="label">Villes</div><div class="value">{}</div></div>'.format(df_p["Ville"].nunique()), unsafe_allow_html=True)
-            with c4: st.markdown('<div class="metric-card"><div class="label">Regions</div><div class="value">{}</div></div>'.format(df_p["Region"].nunique()), unsafe_allow_html=True)
+            pct_av = (1 - df_in.isna().mean().mean()) * 100
+            with c1: st.markdown('<div class="metric-card"><div class="label">Lignes total</div><div class="value">{:,}</div></div>'.format(len(df_in)), unsafe_allow_html=True)
+            with c2: st.markdown('<div class="metric-card"><div class="label">Completude</div><div class="value">{:.0f}%</div></div>'.format(pct_av), unsafe_allow_html=True)
+            with c3: st.markdown('<div class="metric-card"><div class="label">Lignes a enrichir</div><div class="value">{:,}</div></div>'.format(df_in.isna().any(axis=1).sum()), unsafe_allow_html=True)
+            with c4: st.markdown('<div class="metric-card"><div class="label">Colonnes incompletes</div><div class="value">{}</div></div>'.format((df_in.isna().sum()>0).sum()), unsafe_allow_html=True)
 
-            st.markdown('<div class="section-title">Liste des prospects</div>', unsafe_allow_html=True)
-            st.dataframe(df_p.sort_values("Nb Etablissements", ascending=False), use_container_width=True, height=400)
+            st.markdown('<div class="section-title">Apercu du fichier</div>', unsafe_allow_html=True)
+            st.dataframe(df_in.head(8), use_container_width=True, height=230)
 
-            col_dl, col_rst = st.columns([3,1])
-            with col_dl:
-                st.download_button("Telecharger {:,} prospects (.xlsx)".format(len(df_p)),
-                    data=to_excel(df_p),
-                    file_name="prospects_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
+            max_rows = st.number_input("Nb max de lignes a enrichir", 1, len(df_in), min(20, len(df_in)))
+
+            if st.button("Lancer l'enrichissement", use_container_width=True, key="btn_enrich"):
+                # Fix : convertir toutes les colonnes en object (string) avant enrichissement
+                # pour eviter TypeError quand on assigne un SIREN string dans une colonne float64
+                df_out    = df_in.copy().astype(object)
+                to_enrich = df_out[df_in.isna().any(axis=1)].head(max_rows)
+                progress  = st.progress(0)
+                status    = st.empty()
+                log_area  = st.empty()
+                all_logs  = []
+                n         = len(to_enrich)
+                enriched_rows = []  # Collecter les lignes enrichies
+
+                for i, (idx, row) in enumerate(to_enrich.iterrows()):
+                    name = str(row.get("Account Name","") or "")[:45]
+                    status.markdown("**Enrichissement** `{}` ({}/{})".format(name, i+1, n))
+                    progress.progress((i+1)/n)
+
+                    try:
+                        enriched, logs = enrich_row(row)
+                        enriched_rows.append((idx, enriched))
+                        # Mise a jour immediate de df_out avec conversion string propre
+                        for col, val in enriched.items():
+                            if col in df_out.columns:
+                                df_out.at[idx, col] = str(val) if val is not None else None
+                            else:
+                                df_out.at[idx, col] = val
+                    except Exception as e:
+                        logs = {"Sirene": "Erreur: {}".format(str(e)[:40]),
+                                "Pappers": "Non appele", "Magasins": "Non appele"}
+
+                    log_line = "[{:03d}/{}] {:<40} | S: {} | P: {} | M: {}".format(
+                        i+1, n, name,
+                        logs["Sirene"][:45],
+                        logs["Pappers"][:45],
+                        logs["Magasins"][:45],
+                    )
+                    all_logs.append(log_line)
+                    log_area.markdown(
+                        '<div class="log-box">' + "<br>".join(all_logs[-10:]) + "</div>",
+                        unsafe_allow_html=True)
+                    # Delai reduit : 0.5s suffisant, les API prennent deja du temps
+                    time.sleep(0.5)
+
+                status.markdown("**Enrichissement termine !**")
+                progress.progress(1.0)
+                pct_ap = (1 - df_out.replace("None", None).isnull().mean().mean()) * 100
+
+                c1,c2,c3 = st.columns(3)
+                c1.metric("Completude avant", "{:.1f}%".format(pct_av))
+                c2.metric("Completude apres", "{:.1f}%".format(pct_ap), delta="+{:.1f}%".format(pct_ap-pct_av))
+                c3.metric("Lignes traitees", n)
+
+                # Nettoyer les "None" string avant affichage
+                df_display = df_out.replace("None", "").replace("nan", "")
+                st.markdown('<div class="section-title">Resultats enrichis</div>', unsafe_allow_html=True)
+                st.dataframe(df_display, use_container_width=True, height=380)
+                st.session_state.df_prospects = df_display
+
+                st.download_button("Telecharger le fichier enrichi (.xlsx)",
+                    data=to_excel(df_display),
+                    file_name="leads_enrichis_{}.xlsx".format(datetime.now().strftime("%Y%m%d_%H%M")),
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True)
-            with col_rst:
-                if st.button("Effacer", use_container_width=True):
-                    st.session_state.df_prospects = None
-                    st.session_state.df_scored    = None
-                    st.rerun()
-            st.markdown('<div class="info-box">Resultats conserves apres navigation. Cliquez <b>Effacer</b> pour lancer une nouvelle recherche.</div>', unsafe_allow_html=True)
-
-# ==================================================================
-# PAGE 3 - SCORING & TOP 100
-# ==================================================================
-
-elif "Scoring & Top 100" in page:
-    st.markdown("""<div class="main-header">
-        <h1>Cegid Retail - <span class="accent">Scoring & Top 100</span></h1>
-        <p>Priorisation des prospects _ Framework McKinsey Fit / Timing</p>
-    </div>""", unsafe_allow_html=True)
-
-    with st.expander("Methodologie de scoring (cliquez pour voir)", expanded=False):
-        st.markdown("""
-**Score total sur 100 pts = FIT (60 pts) + TIMING (40 pts)**
-
-| Dimension | Critere | Max |
-|-----------|---------|-----|
-| FIT | Secteur NAF retail cible Cegid (habillement, luxe, beaute, sport...) | 20 pts |
-| FIT | Taille reseau (nb etablissements declares Sirene) | 20 pts |
-| FIT | Taille financiere (effectifs Sirene + CA Pappers) | 10 pts |
-| FIT | Geographie France prioritaire | 10 pts |
-| TIMING | Volume activite (nb etablissements comme proxy urgence) | 20 pts |
-| TIMING | Qualite du lead (nb champs remplis sur 6 cles) | 10 pts |
-| TIMING | Dirigeant identifie / CA connu | 10 pts |
-
-**Grades :** A (>=75) Priorite 1 - B (>=55) Priorite 2 - C (>=35) Priorite 3 - D (<35) Hors scope
-        """)
-
-    source = st.radio("Source des donnees", ["Prospection (Page 2)","Uploader un fichier"], horizontal=True)
-    df_to_score = None
-    if source == "Prospection (Page 2)":
-        if st.session_state.df_prospects is not None:
-            df_to_score = st.session_state.df_prospects
-            st.success("{:,} prospects charges depuis la page Prospection.".format(len(df_to_score)))
         else:
-            st.warning("Lancez d'abord une prospection (Page 2) ou uploadez un fichier.")
-    else:
-        up = st.file_uploader("Uploadez votre fichier", type=["xlsx","xls","csv"])
-        if up:
-            df_to_score = pd.read_csv(up, sep=None, engine="python") if up.name.endswith(".csv") else pd.read_excel(up)
-            st.success("{:,} lignes chargees.".format(len(df_to_score)))
-
-    if df_to_score is not None and not df_to_score.empty:
-        top_n = st.slider("Taille du Top", 10, 200, 100)
-        if st.button("Calculer le scoring", use_container_width=True):
-            with st.spinner("Calcul du scoring..."):
-                df_s = score_df(df_to_score)
-                st.session_state.df_scored = df_s
-
-        if st.session_state.df_scored is not None:
-            df_s  = st.session_state.df_scored
-            df_top = df_s.head(top_n)
-            n_a = (df_s["Grade"]=="A").sum()
-            n_b = (df_s["Grade"]=="B").sum()
-            n_c = (df_s["Grade"]=="C").sum()
-            n_d = (df_s["Grade"]=="D").sum()
-
-            c1,c2,c3,c4,c5 = st.columns(5)
-            with c1: st.markdown('<div class="metric-card"><div class="label">Grade A - Priorite 1</div><div class="value" style="color:#166534">{}</div></div>'.format(n_a), unsafe_allow_html=True)
-            with c2: st.markdown('<div class="metric-card"><div class="label">Grade B - Priorite 2</div><div class="value" style="color:#1e40af">{}</div></div>'.format(n_b), unsafe_allow_html=True)
-            with c3: st.markdown('<div class="metric-card"><div class="label">Grade C - Priorite 3</div><div class="value" style="color:#92400e">{}</div></div>'.format(n_c), unsafe_allow_html=True)
-            with c4: st.markdown('<div class="metric-card"><div class="label">Hors scope</div><div class="value" style="color:#991b1b">{}</div></div>'.format(n_d), unsafe_allow_html=True)
-            with c5: st.markdown('<div class="metric-card"><div class="label">Score moyen</div><div class="value">{:.0f}/100</div></div>'.format(df_s["Score Total"].mean()), unsafe_allow_html=True)
-
-            # Repartition par produit recommande
-            if "Produit Recommande" in df_s.columns:
-                st.markdown('<div class="section-title">Repartition par produit Cegid recommande</div>', unsafe_allow_html=True)
-                cp1, cp2 = st.columns(2)
-                with cp1:
-                    prod_counts = df_s["Produit Recommande"].value_counts()
-                    st.bar_chart(prod_counts, color="#003082")
-                    st.caption("Nb de prospects par produit Cegid recommande")
-                with cp2:
-                    seg_counts = df_s["Segment Cegid"].value_counts().reindex(["S","M","L","XL","Hors cible"], fill_value=0)
-                    st.bar_chart(seg_counts, color="#FF6B35")
-                    st.caption("Repartition par segment officiel Cegid (S/M/L/XL)")
-
-            # Distribution
-            st.markdown('<div class="section-title">Distribution des scores</div>', unsafe_allow_html=True)
-            cg1, cg2 = st.columns(2)
-            with cg1:
-                st.bar_chart(df_s["Grade"].value_counts().reindex(["A","B","C","D"],fill_value=0), color="#003082")
-                st.caption("Nombre de prospects par grade")
-            with cg2:
-                score_bins = pd.cut(df_s["Score Total"], bins=[0,20,35,55,75,100],
-                                    labels=["0-20","20-35","35-55","55-75","75-100"])
-                st.bar_chart(score_bins.value_counts().sort_index(), color="#FF6B35")
-                st.caption("Repartition des scores par tranche")
-
-            # Top N
-            st.markdown('<div class="section-title">Top {} - comptes a contacter en priorite</div>'.format(top_n), unsafe_allow_html=True)
-            disp_cols = [c for c in [
-                         "Account Name","Ville","Region","Industry Label",
-                         "Nb Etablissements","Effectifs","Annual Revenue","Dirigeant",
-                         "Score Total","Grade","Priorite",
-                         "Produit Recommande","Segment Cegid","Persona Cible",
-                         "Score Y2","Score Orli","Score Store Excellence",
-                         "Score FIT","Score TIMING","Detail Score"]
-                        if c in df_top.columns]
-            st.dataframe(df_top[disp_cols], use_container_width=True, height=430)
-
-            cd1, cd2 = st.columns(2)
-            with cd1:
-                st.download_button("Telecharger le Top {} (.xlsx)".format(top_n),
-                    data=to_excel(df_top),
-                    file_name="top{}_cegid_{}.xlsx".format(top_n, datetime.now().strftime("%Y%m%d")),
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True)
-            with cd2:
-                st.download_button("Telecharger tous les prospects scores (.xlsx)",
-                    data=to_excel(df_s),
-                    file_name="prospects_scores_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True)
-
-# ==================================================================
-# PAGE 4 - ANALYSE BUSINESS
-# ==================================================================
-
-elif "Analyse Business" in page:
-    st.markdown("""<div class="main-header">
-        <h1>Cegid Retail - <span class="accent">Analyse Business</span></h1>
-        <p>Insights strategiques sur le marche adressable _ Mode consultant McKinsey</p>
-    </div>""", unsafe_allow_html=True)
-
-    # Priorite : df_scored (score) > df_prospects (brut)
-    # Ne pas utiliser "or" avec des DataFrames pandas -> ValueError
-    if st.session_state.df_scored is not None:
-        df_ana = st.session_state.df_scored
-    elif st.session_state.df_prospects is not None:
-        df_ana = st.session_state.df_prospects
-    else:
-        df_ana = None
-    if df_ana is None:
-        up = st.file_uploader("Uploadez votre fichier de prospects (score ou non)", type=["xlsx","xls","csv"])
-        if up:
-            df_ana = pd.read_csv(up, sep=None, engine="python") if up.name.endswith(".csv") else pd.read_excel(up)
-        else:
-            st.markdown("""<div class="info-box">
-            Lancez d'abord une <strong>Prospection (Page 2)</strong> puis un <strong>Scoring (Page 3)</strong>,
-            ou uploadez un fichier Excel ici.
+            st.markdown("""<div style="text-align:center;padding:3rem;background:#f8fafc;border-radius:12px;border:2px dashed #cbd5e1;margin-top:1rem">
+                <div style="font-size:2.5rem">_</div>
+                <h3 style="color:#64748b;font-weight:600">Deposez votre fichier ici</h3>
+                <p style="color:#94a3b8">Excel (.xlsx, .xls) ou CSV acceptes</p>
             </div>""", unsafe_allow_html=True)
 
-    if df_ana is not None and not df_ana.empty:
-        # KPIs globaux
-        st.markdown('<div class="section-title">Marche adressable - vue d\'ensemble</div>', unsafe_allow_html=True)
-        nb_etab_series = pd.to_numeric(df_ana["Nb Etablissements"] if "Nb Etablissements" in df_ana.columns else pd.Series(dtype=float), errors="coerce")
-        c1,c2,c3,c4,c5 = st.columns(5)
-        with c1: st.markdown('<div class="metric-card"><div class="label">Prospects total</div><div class="value">{:,}</div></div>'.format(len(df_ana)), unsafe_allow_html=True)
-        with c2: st.markdown('<div class="metric-card"><div class="label">Total etablissements</div><div class="value">{:,}</div></div>'.format(int(nb_etab_series.sum())), unsafe_allow_html=True)
-        with c3: st.markdown('<div class="metric-card"><div class="label">Mediane reseau</div><div class="value">{:.0f}</div></div>'.format(nb_etab_series.median()), unsafe_allow_html=True)
-        region_col = "Region" if "Region" in df_ana.columns else "Billing Country"
-        with c4: st.markdown('<div class="metric-card"><div class="label">Regions couvertes</div><div class="value">{}</div></div>'.format(df_ana[region_col].nunique() if region_col in df_ana.columns else "N/A"), unsafe_allow_html=True)
-        with c5:
-            if "Grade" in df_ana.columns:
-                prio = df_ana["Grade"].isin(["A","B"]).sum()
-                st.markdown('<div class="metric-card"><div class="label">Leads prioritaires A+B</div><div class="value">{}</div></div>'.format(prio), unsafe_allow_html=True)
+    # ==================================================================
+    # PAGE 2 - PROSPECTION FROM SCRATCH
+    # ==================================================================
 
-        # Analyse par secteur
-        st.markdown('<div class="section-title">Repartition par secteur retail (NAF)</div>', unsafe_allow_html=True)
-        if "Industry Label" in df_ana.columns:
-            _has_etab = "Nb Etablissements" in df_ana.columns
-            _agg_dict = {"nb_prospects": ("Account Name","count")}
-            if _has_etab:
-                df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
-                _agg_dict["moy_etab"] = ("Nb Etablissements","mean")
-            sect = (df_ana.groupby("Industry Label")
-                    .agg(**_agg_dict)
-                    .sort_values("nb_prospects", ascending=False).head(10).reset_index())
-            if _has_etab:
-                sect["moy_etab"] = sect["moy_etab"].round(1)
-                sect.columns = ["Secteur","Nb Prospects","Moy. Etab."]
-            else:
-                sect.columns = ["Secteur","Nb Prospects"]
-                sect["Moy. Etab."] = "N/A"
-            cs1, cs2 = st.columns([3,2])
-            with cs1:
-                st.bar_chart(sect.set_index("Secteur")["Nb Prospects"], color="#003082")
-                st.caption("Nombre de prospects par secteur (Top 10)")
-            with cs2:
-                st.dataframe(sect, use_container_width=True, height=300)
+    elif "Prospection From Scratch" in page:
+        st.markdown("""<div class="main-header">
+            <h1>Cegid Retail - <span class="accent">Prospection</span></h1>
+            <p>Generation d'une liste de prospects retail France depuis zero</p>
+        </div>""", unsafe_allow_html=True)
 
-        # Analyse geographique
-        st.markdown('<div class="section-title">Repartition geographique</div>', unsafe_allow_html=True)
-        reg_col = "Region" if "Region" in df_ana.columns else ("Billing Country" if "Billing Country" in df_ana.columns else None)
-        if reg_col:
-            geo = (df_ana[df_ana[reg_col].notna() & (df_ana[reg_col] != "")]
-                   .groupby(reg_col)
-                   .agg(nb=("Account Name","count"), total_etab=("Nb Etablissements","sum"))
-                   .sort_values("nb", ascending=False).reset_index())
-            geo.columns = ["Region","Nb Prospects"]
-            geo["Total Etab."] = "N/A"
-            if "Nb Etablissements" in df_ana.columns:
-                etab_geo = (df_ana[df_ana[reg_col].notna()]
-                           .groupby(reg_col)["Nb Etablissements"]
-                           .apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
-                           .reset_index())
-                etab_geo.columns = [reg_col, "Total Etab."]
-                geo = geo.merge(etab_geo, on=reg_col, how="left")
-                geo = geo[["Region","Nb Prospects","Total Etab._y"]].rename(
-                    columns={"Total Etab._y":"Total Etab."})
-            cg1, cg2 = st.columns([3,2])
-            with cg1:
-                st.bar_chart(geo.set_index("Region")["Nb Prospects"], color="#FF6B35")
-                st.caption("Prospects par region")
-            with cg2:
-                st.dataframe(geo, use_container_width=True, height=300)
+        st.markdown('<div class="section-title">Criteres de recherche</div>', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([2,2,1])
+        with col1:
+            naf_sel = st.multiselect("Codes NAF (secteurs retail)", list(NAF_RETAIL.keys()),
+                default=["4771Z","4772A","4777Z","4775Z","4778A"],
+                format_func=lambda x: "{} - {}".format(x, NAF_RETAIL[x]))
+        with col2:
+            region_sel = st.selectbox("Region", ["Toutes les regions"] + REGIONS_FR, index=7)
+        with col3:
+            max_res  = st.number_input("Nb max", 5, 500, 100)
+            min_etab = st.number_input("Nb min etab.", 1, 50, 5,
+                                        help="5+ etablissements = enseigne avec reseau de magasins actif")
 
-        # Segmentation taille
-        st.markdown('<div class="section-title">Segmentation par taille de reseau</div>', unsafe_allow_html=True)
-        if "Nb Etablissements" in df_ana.columns:
-            nb_s = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce").dropna()
-            segs = pd.cut(nb_s, bins=[0,4,9,19,49,99,float("inf")],
-                          labels=["Micro 1-4","Petite enseigne 5-9","Moyenne enseigne 10-19",
-                                  "Grande enseigne 20-49","Tres grande 50-99","Top account 100+"])
-            seg_c = segs.value_counts().sort_index()
-            ct1, ct2 = st.columns([2,1])
-            with ct1:
-                st.bar_chart(seg_c, color="#003082")
-                st.caption("Nb de prospects par segment (base scoring Cegid : cible primaire = 10+ etab.)")
-            with ct2:
-                df_seg = seg_c.reset_index()
-                df_seg.columns = ["Segment","Nb Prospects"]
-                df_seg["% du total"] = (df_seg["Nb Prospects"] / df_seg["Nb Prospects"].sum() * 100).round(1).astype(str) + "%"
-                st.dataframe(df_seg, use_container_width=True)
+        col_btn1, col_btn2 = st.columns(2)
+        with col_btn1:
+            if st.button("Tester la connexion API", use_container_width=True, key="btn_test_api"):
+                with st.spinner("Test..."):
+                    try:
+                        resp = requests.get("https://recherche-entreprises.api.gouv.fr/search",
+                                            params={"q":"decathlon","per_page":1}, headers=HEADERS, timeout=8)
+                        if resp.status_code == 200:
+                            d = resp.json()
+                            st.success("API Sirene OK - {:,} resultats disponibles dans la base".format(d.get("total_results",0)))
+                        else:
+                            st.error("API HTTP {} - verifie ta connexion".format(resp.status_code))
+                    except Exception as e:
+                        st.error("Connexion impossible: {}".format(e))
 
-        # Scoring summary + recommandations McKinsey
-        if "Grade" in df_ana.columns:
-            st.markdown('<div class="section-title">Synthese scoring & recommandations strategiques</div>', unsafe_allow_html=True)
-            _grade_agg = {"nb": ("Account Name","count")}
-            if "Score Total" in df_ana.columns:
-                _grade_agg["score_moy"] = ("Score Total","mean")
-            if "Nb Etablissements" in df_ana.columns:
-                df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
-                _grade_agg["etab_moy"] = ("Nb Etablissements","mean")
-            grade_s = df_ana.groupby("Grade").agg(**_grade_agg).round(1).reset_index()
-            grade_s.columns = ["Grade"] + [c for c in ["Nb Prospects","Score Moyen","Etab. Moyen"][:len(_grade_agg)]]
-            st.dataframe(grade_s, use_container_width=True)
+        if not naf_sel:
+            st.warning("Selectionnez au moins un code NAF.")
+        else:
+            with col_btn2:
+                launch = st.button("Lancer la prospection", use_container_width=True, key="btn_prospect")
 
-            n_a = (df_ana["Grade"]=="A").sum() if "Grade" in df_ana.columns else 0
-            n_b = (df_ana["Grade"]=="B").sum() if "Grade" in df_ana.columns else 0
-            top_sect = "N/A"
-            top_reg  = "N/A"
-            if n_a > 0 and "Grade" in df_ana.columns:
-                df_a = df_ana[df_ana["Grade"]=="A"]
-                if "Industry Label" in df_ana.columns:
-                    vc = df_a["Industry Label"].value_counts()
-                    if len(vc): top_sect = vc.index[0]
-                if reg_col and reg_col in df_ana.columns:
-                    vc2 = df_a[reg_col].value_counts()
-                    if len(vc2): top_reg = vc2.index[0]
+            if launch:
+                with st.spinner("Recherche en cours..."):
+                    df_p = prospect_by_naf(naf_sel, region_sel, min_etab, max_res)
+                if df_p.empty:
+                    st.error("Aucun resultat. Reduisez le filtre Nb min etablissements a 1 ou 2.")
+                else:
+                    st.session_state.df_prospects = df_p
+                    st.session_state.df_scored    = None
 
-            score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if (n_a > 0 and "Score Total" in df_ana.columns) else 0
-            etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if (n_a > 0 and "Nb Etablissements" in df_ana.columns) else 0
+            # Afficher depuis session_state : persiste apres navigation entre pages
+            if st.session_state.df_prospects is not None:
+                df_p = st.session_state.df_prospects
+                c1,c2,c3,c4 = st.columns(4)
+                with c1: st.markdown('<div class="metric-card"><div class="label">Prospects</div><div class="value">{:,}</div></div>'.format(len(df_p)), unsafe_allow_html=True)
+                with c2: st.markdown('<div class="metric-card"><div class="label">Nb etab. median</div><div class="value">{:.0f}</div></div>'.format(pd.to_numeric(df_p["Nb Etablissements"],errors="coerce").median()), unsafe_allow_html=True)
+                with c3: st.markdown('<div class="metric-card"><div class="label">Villes</div><div class="value">{}</div></div>'.format(df_p["Ville"].nunique()), unsafe_allow_html=True)
+                with c4: st.markdown('<div class="metric-card"><div class="label">Regions</div><div class="value">{}</div></div>'.format(df_p["Region"].nunique()), unsafe_allow_html=True)
 
-            # Calculer repartition par produit
-            prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
-            seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
+                st.markdown('<div class="section-title">Liste des prospects</div>', unsafe_allow_html=True)
+                st.dataframe(df_p.sort_values("Nb Etablissements", ascending=False), use_container_width=True, height=400)
 
+                col_dl, col_rst = st.columns([3,1])
+                with col_dl:
+                    st.download_button("Telecharger {:,} prospects (.xlsx)".format(len(df_p)),
+                        data=to_excel(df_p),
+                        file_name="prospects_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True)
+                with col_rst:
+                    if st.button("Effacer", use_container_width=True, key="btn_effacer"):
+                        st.session_state.df_prospects = None
+                        st.session_state.df_scored    = None
+                        st.rerun()
+                st.markdown('<div class="info-box">Resultats conserves apres navigation. Cliquez <b>Effacer</b> pour lancer une nouvelle recherche.</div>', unsafe_allow_html=True)
+
+    # ==================================================================
+    # PAGE 3 - SCORING & TOP 100
+    # ==================================================================
+
+    elif "Scoring & Top 100" in page:
+        st.markdown("""<div class="main-header">
+            <h1>Cegid Retail - <span class="accent">Scoring & Top 100</span></h1>
+            <p>Priorisation des prospects _ Framework McKinsey Fit / Timing</p>
+        </div>""", unsafe_allow_html=True)
+
+        with st.expander("Methodologie de scoring (cliquez pour voir)", expanded=False):
             st.markdown("""
-<div class="info-box">
-<strong>Insights strategiques - recommandations McKinsey</strong><br><br>
+    **Score total sur 100 pts = FIT (60 pts) + TIMING (40 pts)**
 
-<b>Marche adressable prioritaire :</b> {n_a} comptes Grade A (Priorite 1) et {n_b} Grade B (Priorite 2),
-soit {total} comptes a traiter en priorite.<br><br>
+    | Dimension | Critere | Max |
+    |-----------|---------|-----|
+    | FIT | Secteur NAF retail cible Cegid (habillement, luxe, beaute, sport...) | 20 pts |
+    | FIT | Taille reseau (nb etablissements declares Sirene) | 20 pts |
+    | FIT | Taille financiere (effectifs Sirene + CA Pappers) | 10 pts |
+    | FIT | Geographie France prioritaire | 10 pts |
+    | TIMING | Volume activite (nb etablissements comme proxy urgence) | 20 pts |
+    | TIMING | Qualite du lead (nb champs remplis sur 6 cles) | 10 pts |
+    | TIMING | Dirigeant identifie / CA connu | 10 pts |
 
-<b>Segmentation selon les regles officielles Cegid :</b><br>
-- Segment S (5-19 magasins) -> Cegid Retail Y2, interlocuteur : Directeur General<br>
-- Segment M (20-99 magasins) -> Y2 + Store Excellence, interlocuteur : DSI + Direction Retail<br>
-- Segment L/XL (100+ magasins) -> Y2 + Store Excellence, interlocuteur : DSI + CTO + VP Retail<br><br>
+    **Grades :** A (>=75) Priorite 1 - B (>=55) Priorite 2 - C (>=35) Priorite 3 - D (<35) Hors scope
+            """)
 
-<b>Profil type Grade A :</b> score moyen {score:.0f}/100, reseau moyen {etab:.0f} etablissements.<br><br>
+        source = st.radio("Source des donnees", ["Prospection (Page 2)","Uploader un fichier"], horizontal=True)
+        df_to_score = None
+        if source == "Prospection (Page 2)":
+            if st.session_state.df_prospects is not None:
+                df_to_score = st.session_state.df_prospects
+                st.success("{:,} prospects charges depuis la page Prospection.".format(len(df_to_score)))
+            else:
+                st.warning("Lancez d'abord une prospection (Page 2) ou uploadez un fichier.")
+        else:
+            up = st.file_uploader("Uploadez votre fichier", type=["xlsx","xls","csv"])
+            if up:
+                df_to_score = pd.read_csv(up, sep=None, engine="python") if up.name.endswith(".csv") else pd.read_excel(up)
+                st.success("{:,} lignes chargees.".format(len(df_to_score)))
 
-<b>Secteur dominant Grade A :</b> {sect} - concentrer les kits de prospection sur ce secteur.<br>
+        if df_to_score is not None and not df_to_score.empty:
+            top_n = st.slider("Taille du Top", 10, 200, 100)
+            if st.button("Calculer le scoring", use_container_width=True, key="btn_scoring"):
+                with st.spinner("Calcul du scoring..."):
+                    df_s = score_df(df_to_score)
+                    st.session_state.df_scored = df_s
 
-<b>Region prioritaire :</b> {reg} - fort potentiel, a couvrir en priorite.<br><br>
+            if st.session_state.df_scored is not None:
+                df_s  = st.session_state.df_scored
+                df_top = df_s.head(top_n)
+                n_a = (df_s["Grade"]=="A").sum()
+                n_b = (df_s["Grade"]=="B").sum()
+                n_c = (df_s["Grade"]=="C").sum()
+                n_d = (df_s["Grade"]=="D").sum()
 
-<b>Recommandation :</b> Prioriser les comptes M/L/XL (20+ magasins) qui representent
-le meilleur ratio effort/ARR pour Cegid. Les comptes S (5-19 magasins) sont qualifies
-mais necessite un cycle de vente plus court avec acces direct au DG.
-</div>""".format(
-                n_a=n_a, n_b=n_b, total=n_a+n_b,
-                score=score_moyen_a, etab=etab_moyen_a,
-                sect=top_sect, reg=top_reg,
-            ), unsafe_allow_html=True)
+                c1,c2,c3,c4,c5 = st.columns(5)
+                with c1: st.markdown('<div class="metric-card"><div class="label">Grade A - Priorite 1</div><div class="value" style="color:#166534">{}</div></div>'.format(n_a), unsafe_allow_html=True)
+                with c2: st.markdown('<div class="metric-card"><div class="label">Grade B - Priorite 2</div><div class="value" style="color:#1e40af">{}</div></div>'.format(n_b), unsafe_allow_html=True)
+                with c3: st.markdown('<div class="metric-card"><div class="label">Grade C - Priorite 3</div><div class="value" style="color:#92400e">{}</div></div>'.format(n_c), unsafe_allow_html=True)
+                with c4: st.markdown('<div class="metric-card"><div class="label">Hors scope</div><div class="value" style="color:#991b1b">{}</div></div>'.format(n_d), unsafe_allow_html=True)
+                with c5: st.markdown('<div class="metric-card"><div class="label">Score moyen</div><div class="value">{:.0f}/100</div></div>'.format(df_s["Score Total"].mean()), unsafe_allow_html=True)
 
-        # Export
-        st.markdown('<div class="section-title">Export du rapport</div>', unsafe_allow_html=True)
-        st.download_button("Telecharger le rapport complet (.xlsx)",
-            data=to_excel(df_ana),
-            file_name="analyse_business_cegid_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True)
+                # Repartition par produit recommande
+                if "Produit Recommande" in df_s.columns:
+                    st.markdown('<div class="section-title">Repartition par produit Cegid recommande</div>', unsafe_allow_html=True)
+                    cp1, cp2 = st.columns(2)
+                    with cp1:
+                        prod_counts = df_s["Produit Recommande"].value_counts()
+                        st.bar_chart(prod_counts, color="#003082")
+                        st.caption("Nb de prospects par produit Cegid recommande")
+                    with cp2:
+                        seg_counts = df_s["Segment Cegid"].value_counts().reindex(["S","M","L","XL","Hors cible"], fill_value=0)
+                        st.bar_chart(seg_counts, color="#FF6B35")
+                        st.caption("Repartition par segment officiel Cegid (S/M/L/XL)")
+
+                # Distribution
+                st.markdown('<div class="section-title">Distribution des scores</div>', unsafe_allow_html=True)
+                cg1, cg2 = st.columns(2)
+                with cg1:
+                    st.bar_chart(df_s["Grade"].value_counts().reindex(["A","B","C","D"],fill_value=0), color="#003082")
+                    st.caption("Nombre de prospects par grade")
+                with cg2:
+                    score_bins = pd.cut(df_s["Score Total"], bins=[0,20,35,55,75,100],
+                                        labels=["0-20","20-35","35-55","55-75","75-100"])
+                    st.bar_chart(score_bins.value_counts().sort_index(), color="#FF6B35")
+                    st.caption("Repartition des scores par tranche")
+
+                # Top N
+                st.markdown('<div class="section-title">Top {} - comptes a contacter en priorite</div>'.format(top_n), unsafe_allow_html=True)
+                disp_cols = [c for c in [
+                             "Account Name","Ville","Region","Industry Label",
+                             "Nb Etablissements","Effectifs","Annual Revenue","Dirigeant",
+                             "Score Total","Grade","Priorite",
+                             "Produit Recommande","Segment Cegid","Persona Cible",
+                             "Score Y2","Score Orli","Score Store Excellence",
+                             "Score FIT","Score TIMING","Detail Score"]
+                            if c in df_top.columns]
+                st.dataframe(df_top[disp_cols], use_container_width=True, height=430)
+
+                cd1, cd2 = st.columns(2)
+                with cd1:
+                    st.download_button("Telecharger le Top {} (.xlsx)".format(top_n),
+                        data=to_excel(df_top),
+                        file_name="top{}_cegid_{}.xlsx".format(top_n, datetime.now().strftime("%Y%m%d")),
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True)
+                with cd2:
+                    st.download_button("Telecharger tous les prospects scores (.xlsx)",
+                        data=to_excel(df_s),
+                        file_name="prospects_scores_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True)
+
+    # ==================================================================
+    # PAGE 4 - ANALYSE BUSINESS
+    # ==================================================================
+
+    elif "Analyse Business" in page:
+        st.markdown("""<div class="main-header">
+            <h1>Cegid Retail - <span class="accent">Analyse Business</span></h1>
+            <p>Insights strategiques sur le marche adressable _ Mode consultant McKinsey</p>
+        </div>""", unsafe_allow_html=True)
+
+        # Priorite : df_scored (score) > df_prospects (brut)
+        # Ne pas utiliser "or" avec des DataFrames pandas -> ValueError
+        if st.session_state.df_scored is not None:
+            df_ana = st.session_state.df_scored
+        elif st.session_state.df_prospects is not None:
+            df_ana = st.session_state.df_prospects
+        else:
+            df_ana = None
+        if df_ana is None:
+            up = st.file_uploader("Uploadez votre fichier de prospects (score ou non)", type=["xlsx","xls","csv"])
+            if up:
+                df_ana = pd.read_csv(up, sep=None, engine="python") if up.name.endswith(".csv") else pd.read_excel(up)
+            else:
+                st.markdown("""<div class="info-box">
+                Lancez d'abord une <strong>Prospection (Page 2)</strong> puis un <strong>Scoring (Page 3)</strong>,
+                ou uploadez un fichier Excel ici.
+                </div>""", unsafe_allow_html=True)
+
+        if df_ana is not None and not df_ana.empty:
+            # KPIs globaux
+            st.markdown('<div class="section-title">Marche adressable - vue d\'ensemble</div>', unsafe_allow_html=True)
+            nb_etab_series = pd.to_numeric(df_ana["Nb Etablissements"] if "Nb Etablissements" in df_ana.columns else pd.Series(dtype=float), errors="coerce")
+            c1,c2,c3,c4,c5 = st.columns(5)
+            with c1: st.markdown('<div class="metric-card"><div class="label">Prospects total</div><div class="value">{:,}</div></div>'.format(len(df_ana)), unsafe_allow_html=True)
+            with c2: st.markdown('<div class="metric-card"><div class="label">Total etablissements</div><div class="value">{:,}</div></div>'.format(int(nb_etab_series.sum())), unsafe_allow_html=True)
+            with c3: st.markdown('<div class="metric-card"><div class="label">Mediane reseau</div><div class="value">{:.0f}</div></div>'.format(nb_etab_series.median()), unsafe_allow_html=True)
+            region_col = "Region" if "Region" in df_ana.columns else "Billing Country"
+            with c4: st.markdown('<div class="metric-card"><div class="label">Regions couvertes</div><div class="value">{}</div></div>'.format(df_ana[region_col].nunique() if region_col in df_ana.columns else "N/A"), unsafe_allow_html=True)
+            with c5:
+                if "Grade" in df_ana.columns:
+                    prio = df_ana["Grade"].isin(["A","B"]).sum()
+                    st.markdown('<div class="metric-card"><div class="label">Leads prioritaires A+B</div><div class="value">{}</div></div>'.format(prio), unsafe_allow_html=True)
+
+            # Analyse par secteur
+            st.markdown('<div class="section-title">Repartition par secteur retail (NAF)</div>', unsafe_allow_html=True)
+            if "Industry Label" in df_ana.columns:
+                _has_etab = "Nb Etablissements" in df_ana.columns
+                _agg_dict = {"nb_prospects": ("Account Name","count")}
+                if _has_etab:
+                    df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
+                    _agg_dict["moy_etab"] = ("Nb Etablissements","mean")
+                sect = (df_ana.groupby("Industry Label")
+                        .agg(**_agg_dict)
+                        .sort_values("nb_prospects", ascending=False).head(10).reset_index())
+                if _has_etab:
+                    sect["moy_etab"] = sect["moy_etab"].round(1)
+                    sect.columns = ["Secteur","Nb Prospects","Moy. Etab."]
+                else:
+                    sect.columns = ["Secteur","Nb Prospects"]
+                    sect["Moy. Etab."] = "N/A"
+                cs1, cs2 = st.columns([3,2])
+                with cs1:
+                    st.bar_chart(sect.set_index("Secteur")["Nb Prospects"], color="#003082")
+                    st.caption("Nombre de prospects par secteur (Top 10)")
+                with cs2:
+                    st.dataframe(sect, use_container_width=True, height=300)
+
+            # Analyse geographique
+            st.markdown('<div class="section-title">Repartition geographique</div>', unsafe_allow_html=True)
+            reg_col = "Region" if "Region" in df_ana.columns else ("Billing Country" if "Billing Country" in df_ana.columns else None)
+            if reg_col:
+                df_geo = df_ana[df_ana[reg_col].notna() & (df_ana[reg_col] != "")]
+                geo = (df_geo.groupby(reg_col)
+                       .agg(nb=("Account Name","count"))
+                       .sort_values("nb", ascending=False).reset_index())
+                geo.columns = [reg_col, "Nb Prospects"]
+                geo["Total Etab."] = "N/A"
+                if "Nb Etablissements" in df_ana.columns:
+                    etab_geo = (df_geo.groupby(reg_col)["Nb Etablissements"]
+                               .apply(lambda x: pd.to_numeric(x, errors="coerce").sum())
+                               .reset_index())
+                    etab_geo.columns = [reg_col, "Total Etab."]
+                    geo = geo.merge(etab_geo, on=reg_col, how="left")
+                geo = geo.rename(columns={reg_col: "Region"})
+                cg1, cg2 = st.columns([3,2])
+                with cg1:
+                    st.bar_chart(geo.set_index("Region")["Nb Prospects"], color="#FF6B35")
+                    st.caption("Prospects par region")
+                with cg2:
+                    st.dataframe(geo, use_container_width=True, height=300)
+
+            # Segmentation taille
+            st.markdown('<div class="section-title">Segmentation par taille de reseau</div>', unsafe_allow_html=True)
+            if "Nb Etablissements" in df_ana.columns:
+                nb_s = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce").dropna()
+                segs = pd.cut(nb_s, bins=[0,4,9,19,49,99,float("inf")],
+                              labels=["Micro 1-4","Petite enseigne 5-9","Moyenne enseigne 10-19",
+                                      "Grande enseigne 20-49","Tres grande 50-99","Top account 100+"])
+                seg_c = segs.value_counts().sort_index()
+                ct1, ct2 = st.columns([2,1])
+                with ct1:
+                    st.bar_chart(seg_c, color="#003082")
+                    st.caption("Nb de prospects par segment (base scoring Cegid : cible primaire = 10+ etab.)")
+                with ct2:
+                    df_seg = seg_c.reset_index()
+                    df_seg.columns = ["Segment","Nb Prospects"]
+                    df_seg["% du total"] = (df_seg["Nb Prospects"] / df_seg["Nb Prospects"].sum() * 100).round(1).astype(str) + "%"
+                    st.dataframe(df_seg, use_container_width=True)
+
+            # Scoring summary + recommandations McKinsey
+            if "Grade" in df_ana.columns:
+                st.markdown('<div class="section-title">Synthese scoring & recommandations strategiques</div>', unsafe_allow_html=True)
+                _grade_agg = {"nb": ("Account Name","count")}
+                if "Score Total" in df_ana.columns:
+                    _grade_agg["score_moy"] = ("Score Total","mean")
+                if "Nb Etablissements" in df_ana.columns:
+                    df_ana["Nb Etablissements"] = pd.to_numeric(df_ana["Nb Etablissements"], errors="coerce")
+                    _grade_agg["etab_moy"] = ("Nb Etablissements","mean")
+                grade_s = df_ana.groupby("Grade").agg(**_grade_agg).round(1).reset_index()
+                grade_s.columns = ["Grade"] + [c for c in ["Nb Prospects","Score Moyen","Etab. Moyen"][:len(_grade_agg)]]
+                st.dataframe(grade_s, use_container_width=True)
+
+                n_a = (df_ana["Grade"]=="A").sum() if "Grade" in df_ana.columns else 0
+                n_b = (df_ana["Grade"]=="B").sum() if "Grade" in df_ana.columns else 0
+                top_sect = "N/A"
+                top_reg  = "N/A"
+                if n_a > 0 and "Grade" in df_ana.columns:
+                    df_a = df_ana[df_ana["Grade"]=="A"]
+                    if "Industry Label" in df_ana.columns:
+                        vc = df_a["Industry Label"].value_counts()
+                        if len(vc): top_sect = vc.index[0]
+                    if reg_col and reg_col in df_ana.columns:
+                        vc2 = df_a[reg_col].value_counts()
+                        if len(vc2): top_reg = vc2.index[0]
+
+                score_moyen_a = df_ana[df_ana["Grade"]=="A"]["Score Total"].mean() if (n_a > 0 and "Score Total" in df_ana.columns) else 0
+                etab_moyen_a  = pd.to_numeric(df_ana[df_ana["Grade"]=="A"]["Nb Etablissements"], errors="coerce").mean() if (n_a > 0 and "Nb Etablissements" in df_ana.columns) else 0
+
+                # Calculer repartition par produit
+                prod_a = df_ana[df_ana["Grade"]=="A"]["Produit Recommande"].value_counts().to_dict() if "Produit Recommande" in df_ana.columns else {}
+                seg_m_l_xl = df_ana["Segment Cegid"].isin(["M","L","XL"]).sum() if "Segment Cegid" in df_ana.columns else 0
+
+                st.markdown("""
+    <div class="info-box">
+    <strong>Insights strategiques - recommandations McKinsey</strong><br><br>
+
+    <b>Marche adressable prioritaire :</b> {n_a} comptes Grade A (Priorite 1) et {n_b} Grade B (Priorite 2),
+    soit {total} comptes a traiter en priorite.<br><br>
+
+    <b>Segmentation selon les regles officielles Cegid :</b><br>
+    - Segment S (5-19 magasins) -> Cegid Retail Y2, interlocuteur : Directeur General<br>
+    - Segment M (20-99 magasins) -> Y2 + Store Excellence, interlocuteur : DSI + Direction Retail<br>
+    - Segment L/XL (100+ magasins) -> Y2 + Store Excellence, interlocuteur : DSI + CTO + VP Retail<br><br>
+
+    <b>Profil type Grade A :</b> score moyen {score:.0f}/100, reseau moyen {etab:.0f} etablissements.<br><br>
+
+    <b>Secteur dominant Grade A :</b> {sect} - concentrer les kits de prospection sur ce secteur.<br>
+
+    <b>Region prioritaire :</b> {reg} - fort potentiel, a couvrir en priorite.<br><br>
+
+    <b>Recommandation :</b> Prioriser les comptes M/L/XL (20+ magasins) qui representent
+    le meilleur ratio effort/ARR pour Cegid. Les comptes S (5-19 magasins) sont qualifies
+    mais necessite un cycle de vente plus court avec acces direct au DG.
+    </div>""".format(
+                    n_a=n_a, n_b=n_b, total=n_a+n_b,
+                    score=score_moyen_a, etab=etab_moyen_a,
+                    sect=top_sect, reg=top_reg,
+                ), unsafe_allow_html=True)
+
+            # Export
+            st.markdown('<div class="section-title">Export du rapport</div>', unsafe_allow_html=True)
+            st.download_button("Telecharger le rapport complet (.xlsx)",
+                data=to_excel(df_ana),
+                file_name="analyse_business_cegid_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True)
+
+except Exception as _page_err:
+    st.error("Erreur inattendue — rechargez la page (F5). Detail: {}".format(str(_page_err)[:200]))
+    st.info("Si le probleme persiste, utilisez le bouton Effacer dans la page Prospection.")
