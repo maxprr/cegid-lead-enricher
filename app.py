@@ -44,7 +44,18 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"],
 }
 html,body,[class*="css"]{font-family:'DM Sans',sans-serif!important}
 [data-testid="stSidebar"]{background:linear-gradient(180deg,#0d1f3c 0%,#003082 100%) !important}
-[data-testid="stSidebar"] *{color:white!important}
+[data-testid="stSidebar"] * {color:white !important}
+[data-testid="stSidebar"] p {color:white !important}
+[data-testid="stSidebar"] span {color:white !important}
+[data-testid="stSidebar"] label {color:white !important}
+[data-testid="stSidebar"] div {color:white !important}
+[data-testid="stSidebar"] li {color:white !important}
+[data-testid="stSidebar"] a {color:white !important}
+[data-testid="stSidebar"] small {color:white !important}
+[data-testid="stSidebar"] .stMarkdown {color:white !important}
+[data-testid="stSidebar"] .stMarkdown p {color:white !important}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {color:white !important}
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] li {color:white !important}
 .main-header{background:linear-gradient(135deg,#003082,#1a4fa8);padding:1.8rem 2.5rem;border-radius:16px;margin-bottom:1.5rem;color:white;position:relative;overflow:hidden}
 .main-header::before{content:'';position:absolute;top:-50%;right:-5%;width:280px;height:280px;background:rgba(255,107,53,.12);border-radius:50%}
 .main-header h1{font-size:1.9rem;font-weight:700;margin:0}
@@ -73,15 +84,14 @@ h1, h2, h3, h4 { color: #003082 !important; }
 
 def load_keys():
     """
-    Charge les clés API depuis deux sources selon l'environnement :
-    - En local       : fichier .env dans le même dossier que app.py
-    - Streamlit Cloud: st.secrets (configuré dans Settings > Secrets)
-    
-    Priorité : st.secrets > .env (permet de surcharger en prod)
+    Charge les clés API :
+    - Streamlit Cloud : st.secrets (Settings → Secrets dans le dashboard)
+    - Local           : fichier .env dans le même dossier que app.py
+    Priorité : st.secrets > .env
     """
     keys = {}
 
-    # 1. Charger depuis .env (usage local)
+    # 1. .env en local
     env_path = Path(__file__).parent / ".env"
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -90,20 +100,32 @@ def load_keys():
                 k, _, v = line.partition("=")
                 keys[k.strip()] = v.strip()
 
-    # 2. Surcharger avec st.secrets si disponible (Streamlit Cloud)
+    # 2. st.secrets (Streamlit Cloud) — prioritaire
     try:
+        secrets = st.secrets
         for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY"]:
-            if k in st.secrets:
-                keys[k] = st.secrets[k]
+            val = secrets.get(k, "")
+            if val:
+                keys[k] = val
     except Exception:
-        pass  # st.secrets non disponible en local = normal
+        pass
 
     return keys
+
+def is_streamlit_cloud():
+    """Détecte si on tourne sur Streamlit Cloud."""
+    import os
+    return (
+        os.environ.get("STREAMLIT_SHARING_MODE") == "1"
+        or os.environ.get("HOME", "").startswith("/home/adminuser")
+        or "/mount/src/" in str(Path(__file__))
+    )
 
 _KEYS       = load_keys()
 PAPPERS_KEY = _KEYS.get("PAPPERS_API_KEY", "")
 GMAPS_KEY   = _KEYS.get("GOOGLE_MAPS_API_KEY", "")
 SERPAPI_KEY = _KEYS.get("SERPAPI_KEY", "")
+ON_CLOUD    = is_streamlit_cloud()
 
 # ══════════════════════════════════════════════════════════════════
 # 2. CONSTANTES METIER
@@ -1124,7 +1146,10 @@ with st.sidebar:
     st.markdown("{} Google Maps {}".format("🟢" if GMAPS_KEY else "🔴", "(active)" if GMAPS_KEY else "(absente)"))
     st.markdown("{} SerpApi {}".format("🟢" if SERPAPI_KEY else "⚪", "(active)" if SERPAPI_KEY else "(optionnel)"))
     if not PAPPERS_KEY or not GMAPS_KEY:
-        st.markdown("<small style='color:#fbbf24'>Ajoutez vos cles dans le fichier .env</small>", unsafe_allow_html=True)
+        if ON_CLOUD:
+            st.markdown("<small style='color:#fbbf24'>Ajoutez vos cles dans Settings → Secrets</small>", unsafe_allow_html=True)
+        else:
+            st.markdown("<small style='color:#fbbf24'>Ajoutez vos cles dans le fichier .env</small>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("**Sources**")
     st.markdown("""
@@ -1146,11 +1171,11 @@ if "📂 Enrichissement Dataset" in page:
     </div>""", unsafe_allow_html=True)
 
     if not PAPPERS_KEY:
-        _on_cloud = bool(st.secrets) if hasattr(st, 'secrets') else False
-        if _on_cloud:
-            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez PAPPERS_API_KEY dans Settings → Secrets de votre app Streamlit Cloud."
+        _on_cloud = ON_CLOUD
+        if ON_CLOUD:
+            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez <b>PAPPERS_API_KEY</b> dans <b>Settings → Secrets</b> (menu Manage app en bas a droite)."
         else:
-            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez PAPPERS_API_KEY=votre_cle dans le fichier .env."
+            _msg = "Cle Pappers absente → CA et dirigeants non recuperes. Ajoutez <code>PAPPERS_API_KEY=votre_cle</code> dans le fichier <code>.env</code>."
         st.markdown('<div class="warn-box">{}</div>'.format(_msg), unsafe_allow_html=True)
     if not GMAPS_KEY and not SERPAPI_KEY:
         st.markdown('<div class="warn-box">Aucune cle Maps → le nb de magasins physiques ne sera pas recupere automatiquement. Le nombre d\'etablissements Sirene sera utilise comme proxy.</div>', unsafe_allow_html=True)
