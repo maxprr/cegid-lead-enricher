@@ -171,6 +171,48 @@ div[data-testid="stButton"] > button p,
 div[data-testid="stButton"] > button span { color:white !important; }
 .stProgress > div > div { background:#FF6B35 !important; }
 div[data-testid="stTabs"] button { font-weight:600; }
+
+/* ── Gros onglets sidebar — Streamlit buttons restyled ── */
+[data-testid="stSidebar"] div[data-testid="stButton"] > button {
+    background: rgba(255,255,255,0.07) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 10px !important;
+    color: white !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    padding: 10px 14px !important;
+    margin: 0px 0 !important;
+    text-align: left !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 48px !important;
+    line-height: 1.3 !important;
+}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
+    background: rgba(255,255,255,0.18) !important;
+    border-color: rgba(255,255,255,0.35) !important;
+}
+[data-testid="stSidebar"] div[data-testid="stButton"] > button p,
+[data-testid="stSidebar"] div[data-testid="stButton"] > button span {
+    color: white !important;
+    white-space: pre-wrap !important;
+    text-align: left !important;
+}
+
+/* ── Boutons navigation bas de page ── */
+.page-nav {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:2.5rem; padding-top:1.2rem;
+    border-top:1px solid #e2e8f0;
+}
+.page-nav-info { font-size:0.85rem; color:#94a3b8; font-weight:500; }
+div[data-testid="stButton"].nav-prev > button {
+    background:white !important; color:#003082 !important;
+    border:1.5px solid #003082 !important; font-weight:600 !important;
+}
+div[data-testid="stButton"].nav-prev > button:hover { background:#EFF6FF !important; }
+div[data-testid="stButton"].nav-prev > button p,
+div[data-testid="stButton"].nav-prev > button span { color:#003082 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1049,24 +1091,75 @@ if "df_scored"    not in st.session_state: st.session_state.df_scored    = None
 # 10. SIDEBAR
 # ══════════════════════════════════════════════════════════════════
 
+# ── Pages définition ──────────────────────────────────────────
+PAGES = [
+    ("Enrichissement Dataset",   "01", "Compléter votre base"),
+    ("Prospection From Scratch", "02", "Trouver de nouveaux prospects"),
+    ("Scoring & Top 100",        "03", "Prioriser les meilleurs leads"),
+    ("Dashboard Territoire",     "04", "Carte & analyse géo"),
+    ("Generateur de Pitch IA",   "05", "Générer les kits de vente"),
+    ("Analyse Business",         "06", "Insights & recommandations"),
+]
+PAGE_NAMES = [p[0] for p in PAGES]
+
+if "page_idx" not in st.session_state:
+    st.session_state.page_idx = 0
+
+def go_to(idx):
+    st.session_state.page_idx = max(0, min(len(PAGES)-1, idx))
+
 with st.sidebar:
     st.markdown("## Cegid Retail")
     st.markdown("**Lead Intelligence Platform v3.0**")
     st.markdown("---")
-    page = st.radio("Navigation", [
-        "Enrichissement Dataset",
-        "Prospection From Scratch",
-        "Scoring & Top 100",
-        "Dashboard Territoire",
-        "Generateur de Pitch IA",
-        "Analyse Business",
-    ], label_visibility="collapsed")
+
+    # Gros boutons de navigation
+    for i, (pname, pnum, pdesc) in enumerate(PAGES):
+        is_active = (i == st.session_state.page_idx)
+        # Affiche le label complet avec step et description
+        btn_label = "{} {}\n{}".format(pnum, pname, pdesc)
+        if is_active:
+            st.markdown('<div style="background:#FF6B35;border-radius:10px;padding:12px 14px;margin:3px 0">'
+                '<div style="font-size:.7rem;color:rgba(255,255,255,.7);margin-bottom:2px">{} — {}</div>'
+                '<div style="font-size:.95rem;font-weight:700;color:white">{}</div>'
+                '</div>'.format(pnum, pdesc, pname), unsafe_allow_html=True)
+            if st.button(pname, key="nav_{}".format(i), use_container_width=True):
+                go_to(i); st.rerun()
+        else:
+            st.markdown('<div style="border-radius:10px;margin:3px 0;border:1px solid rgba(255,255,255,.15)">'
+                '<div style="padding:2px 14px 0;font-size:.7rem;color:rgba(255,255,255,.5)">{} — {}</div>'
+                '</div>'.format(pnum, pdesc), unsafe_allow_html=True)
+            if st.button(pname, key="nav_{}".format(i), use_container_width=True):
+                go_to(i); st.rerun()
+
     st.markdown("---")
     st.markdown("**Statut clés API**")
     st.markdown("{} Pappers {}".format("✅" if PAPPERS_KEY else "❌","(active)" if PAPPERS_KEY else "(absente)"))
     st.markdown("{} Google Maps {}".format("✅" if GMAPS_KEY else "⚠️","(active)" if GMAPS_KEY else "(optionnel)"))
     st.markdown("{} SerpApi {}".format("✅" if SERPAPI_KEY else "⚠️","(active)" if SERPAPI_KEY else "(optionnel)"))
     st.markdown("{} Anthropic/Claude {}".format("✅" if os.environ.get("ANTHROPIC_API_KEY") else "❌","(active)" if os.environ.get("ANTHROPIC_API_KEY") else "(requise p.5)"))
+
+page = PAGE_NAMES[st.session_state.page_idx]
+
+# ── Helper : boutons nav bas de page ─────────────────────────────
+def nav_buttons(current_idx):
+    st.markdown("---")
+    cols = st.columns([1, 2, 1])
+    with cols[0]:
+        if current_idx > 0:
+            st.markdown('<div class="nav-prev">', unsafe_allow_html=True)
+            if st.button("← " + PAGE_NAMES[current_idx - 1], key="prev_{}".format(current_idx), use_container_width=True):
+                go_to(current_idx - 1)
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+    with cols[1]:
+        st.markdown('<p style="text-align:center;color:#94a3b8;font-size:.85rem;margin-top:.6rem">Page {} / {}</p>'.format(
+            current_idx + 1, len(PAGES)), unsafe_allow_html=True)
+    with cols[2]:
+        if current_idx < len(PAGES) - 1:
+            if st.button(PAGE_NAMES[current_idx + 1] + " →", key="next_{}".format(current_idx), use_container_width=True):
+                go_to(current_idx + 1)
+                st.rerun()
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1163,6 +1256,8 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 2 : PROSPECTION FROM SCRATCH ────────────────────────
     # ══════════════════════════════════════════════════════════════
+        nav_buttons(0)
+
     elif "Prospection From Scratch" in page:
         st.markdown("""<div class="main-header">
             <h1>Cegid Retail — <span class="accent">Prospection From Scratch</span></h1>
@@ -1224,6 +1319,8 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 3 : SCORING & TOP 100 ────────────────────────────────
     # ══════════════════════════════════════════════════════════════
+        nav_buttons(1)
+
     elif "Scoring & Top 100" in page:
         st.markdown("""<div class="main-header">
             <h1>Cegid Retail — <span class="accent">Scoring & Top 100</span></h1>
@@ -1366,6 +1463,8 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 4 : DASHBOARD TERRITOIRE ────────────────────────────
     # ══════════════════════════════════════════════════════════════
+        nav_buttons(2)
+
     elif "Dashboard Territoire" in page:
         st.markdown("""<div class="main-header">
             <h1>Cegid Retail — <span class="accent">Dashboard Territoire</span></h1>
@@ -1491,6 +1590,8 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 5 : GÉNÉRATEUR DE PITCH IA ──────────────────────────
     # ══════════════════════════════════════════════════════════════
+        nav_buttons(3)
+
     elif "Generateur de Pitch" in page:
         st.markdown("""<div class="main-header">
             <h1>Cegid Retail — <span class="accent">Générateur de Pitch IA</span></h1>
@@ -1621,6 +1722,8 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 6 : ANALYSE BUSINESS (Mode Consultant McKinsey) ──────
     # ══════════════════════════════════════════════════════════════
+        nav_buttons(4)
+
     elif "Analyse Business" in page:
         st.markdown("""<div class="main-header">
             <h1>Cegid Retail — <span class="accent">Analyse Business</span></h1>
@@ -1780,6 +1883,8 @@ Les comptes orphelins Grade A/B représentent une opportunité de réallocation 
                 file_name="analyse_business_cegid_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
+
+        nav_buttons(5)
 
 except Exception as _page_err:
     import traceback
