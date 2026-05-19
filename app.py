@@ -180,6 +180,7 @@ div[data-testid="stTabs"] button { font-weight:600; }
 
 def load_keys():
     keys = {}
+    # 1. Fichier .env local
     env_path = Path(__file__).parent / ".env"
     if env_path.exists():
         for line in env_path.read_text().splitlines():
@@ -187,14 +188,21 @@ def load_keys():
             if line and not line.startswith("#") and "=" in line:
                 k, _, v = line.partition("=")
                 keys[k.strip()] = v.strip()
-    try:
-        secrets = st.secrets
-        for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY", "ANTHROPIC_API_KEY"]:
-            val = secrets.get(k, "")
+    # 2. Variables d'environnement système (Streamlit Cloud les injecte aussi)
+    for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY", "ANTHROPIC_API_KEY"]:
+        env_val = os.environ.get(k, "")
+        if env_val:
+            keys[k] = env_val
+    # 3. st.secrets (prioritaire — Streamlit Cloud Secrets)
+    # Chaque clé est lue individuellement avec try/except pour éviter
+    # que l'absence d'une clé ne bloque les autres
+    for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY", "ANTHROPIC_API_KEY"]:
+        try:
+            val = st.secrets[k]
             if val:
-                keys[k] = val
-    except Exception:
-        pass
+                keys[k] = str(val)
+        except Exception:
+            pass
     return keys
 
 def is_streamlit_cloud():
@@ -1434,7 +1442,7 @@ try:
                         hover_name="_region",
                         hover_data={"nb_comptes":True,"score_moyen":":.1f","pct_orphelins":True,"lat":False,"lon":False},
                         size_max=60, zoom=4.5, center={"lat":46.5,"lon":2.5},
-                        mapbox_style="carto-positron", title="Carte Prospects — Par Région")
+                        mapbox_style="open-street-map", title="Carte Prospects — Par Région")
                 else:
                     st.warning("Colonne Region introuvable dans le fichier. Utilisez la vue Par pays.")
                     map_view = "Par pays"
@@ -1458,7 +1466,7 @@ try:
                         hover_data={"nb_comptes":True,"score_moyen":":.1f","pct_orphelins":True,"lat":False,"lon":False},
                         size_max=80, zoom=4,
                         center={"lat":47.0,"lon":5.0},
-                        mapbox_style="carto-positron", title="Carte Prospects — Par Pays")
+                        mapbox_style="open-street-map", title="Carte Prospects — Par Pays")
                 else:
                     st.warning("Colonne Billing Country introuvable."); st.stop()
 
