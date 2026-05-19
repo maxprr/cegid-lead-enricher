@@ -1067,15 +1067,7 @@ with st.sidebar:
     st.markdown("{} Google Maps {}".format("✅" if GMAPS_KEY else "⚠️","(active)" if GMAPS_KEY else "(optionnel)"))
     st.markdown("{} SerpApi {}".format("✅" if SERPAPI_KEY else "⚠️","(active)" if SERPAPI_KEY else "(optionnel)"))
     st.markdown("{} Anthropic/Claude {}".format("✅" if os.environ.get("ANTHROPIC_API_KEY") else "❌","(active)" if os.environ.get("ANTHROPIC_API_KEY") else "(requise p.5)"))
-    st.markdown("---")
-    st.markdown("**Sources enrichissement**")
-    st.markdown("""
-- API Sirene (INSEE) — gratuit  
-- OpenStreetMap Overpass — gratuit  
-- Scraping store locator — gratuit  
-- Pappers API — 1 000 req/mois gratuit  
-- Google Maps Places — optionnel  
-""")
+
 
 # ══════════════════════════════════════════════════════════════════
 # ── PAGE 1 : ENRICHISSEMENT DATASET ──────────────────────────────
@@ -1257,7 +1249,7 @@ try:
 **Produit recommandé :** celui avec le meilleur score FIT → pitch adapté automatiquement.
 """)
 
-        tab_source = st.radio("Source des données", ["Prospection (Page 2)","Base CRM existante (avec ABX/Owner)","Uploader un fichier"], horizontal=True)
+        tab_source = st.radio("Source des données", ["Prospection (Page 2)","Base CRM existante (avec ABX/Owner)"], horizontal=True)
         df_to_score = None
 
         if "Prospection" in tab_source:
@@ -1275,11 +1267,7 @@ try:
                     st.session_state.df_scored = df_to_score
                 st.success("{:,} comptes charges et scorés.".format(len(df_to_score)))
                 st.rerun()
-        else:
-            up = st.file_uploader("Uploadez votre fichier", type=["xlsx","xls","csv"])
-            if up:
-                df_to_score = pd.read_csv(up, sep=None, engine="python") if up.name.endswith(".csv") else pd.read_excel(up)
-                st.success("{:,} lignes chargees.".format(len(df_to_score)))
+
 
         if df_to_score is not None and not df_to_score.empty and "Score Total" not in df_to_score.columns:
             top_n_input = st.slider("Taille du Top", 10, 200, 100)
@@ -1672,15 +1660,19 @@ try:
             st.markdown('<div class="section-title">Répartition par secteur retail (NAF)</div>', unsafe_allow_html=True)
             if "Industry Label" in df_ana.columns:
                 sect = df_ana.groupby("Industry Label").agg(nb_prospects=("Account Name","count")).sort_values("nb_prospects",ascending=False).head(10).reset_index()
+                sect = sect.reset_index(drop=True)
+                sect["#"] = sect.index  # numéro pour l'axe X
                 cs1, cs2 = st.columns([3,2])
                 with cs1:
-                    fig_sect = px.bar(sect, x="Industry Label", y="nb_prospects",
+                    fig_sect = px.bar(sect, x="#", y="nb_prospects",
                         title="Top 10 secteurs NAF", color_discrete_sequence=["#003082"])
                     fig_sect.update_layout(height=320, plot_bgcolor="white", paper_bgcolor="white",
-                        margin=dict(t=40,b=60,l=20,r=20), xaxis_tickangle=-30, showlegend=False, xaxis_title="", yaxis_title="Nb prospects")
+                        margin=dict(t=40,b=20,l=20,r=20), showlegend=False, xaxis_title="", yaxis_title="Nb prospects")
+                    fig_sect.update_xaxes(tickmode="array", tickvals=list(sect["#"]), ticktext=[str(i) for i in sect["#"]])
                     st.plotly_chart(fig_sect, use_container_width=True)
                 with cs2:
-                    st.dataframe(sect.rename(columns={"Industry Label":"Secteur","nb_prospects":"Nb Prospects"}), use_container_width=True, height=300)
+                    disp_sect = sect[["#","Industry Label","nb_prospects"]].rename(columns={"#":"N°","Industry Label":"Secteur","nb_prospects":"Nb"})
+                    st.dataframe(disp_sect, use_container_width=True, height=320)
 
             # Répartition géographique
             st.markdown('<div class="section-title">Répartition géographique</div>', unsafe_allow_html=True)
