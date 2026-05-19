@@ -1442,7 +1442,7 @@ try:
                         projection_scale=4,
                         showland=True, landcolor="#f0f0f0",
                         showcoastlines=True, coastlinecolor="#aaaaaa",
-                        showborder=True, bordercolor="#888888",
+                        showcountries=True, countrycolor="#888888",
                         showframe=False,
                         bgcolor="white",
                     )
@@ -1476,7 +1476,7 @@ try:
                         projection_scale=3,
                         showland=True, landcolor="#f0f0f0",
                         showcoastlines=True, coastlinecolor="#aaaaaa",
-                        showborder=True, bordercolor="#888888",
+                        showcountries=True, countrycolor="#888888",
                         showframe=False,
                         bgcolor="white",
                     )
