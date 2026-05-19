@@ -1332,7 +1332,6 @@ try:
 
 
         if df_to_score is not None and not df_to_score.empty and "Score Total" not in df_to_score.columns:
-            top_n_input = st.slider("Taille du Top", 10, 200, 100)
             if st.button("Calculer le scoring", use_container_width=True, type="primary"):
                 with st.spinner("Calcul du scoring McKinsey..."):
                     df_s = score_df(df_to_score)
