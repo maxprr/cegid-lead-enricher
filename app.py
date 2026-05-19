@@ -172,31 +172,33 @@ div[data-testid="stButton"] > button span { color:white !important; }
 .stProgress > div > div { background:#FF6B35 !important; }
 div[data-testid="stTabs"] button { font-weight:600; }
 
-/* ── Gros onglets sidebar — Streamlit buttons restyled ── */
+/* ── Onglets sidebar — tabs épurés ── */
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {
-    background: rgba(255,255,255,0.07) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 10px !important;
-    color: white !important;
-    font-size: 0.95rem !important;
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    border-radius: 0 !important;
+    color: rgba(255,255,255,0.65) !important;
+    font-size: 0.92rem !important;
     font-weight: 500 !important;
-    padding: 10px 14px !important;
-    margin: 0px 0 !important;
+    padding: 13px 6px !important;
+    margin: 0 !important;
     text-align: left !important;
     width: 100% !important;
-    height: auto !important;
-    min-height: 48px !important;
-    line-height: 1.3 !important;
+    min-height: 50px !important;
+    transition: all .15s !important;
+    box-shadow: none !important;
 }
 [data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
-    background: rgba(255,255,255,0.18) !important;
-    border-color: rgba(255,255,255,0.35) !important;
+    background: rgba(255,255,255,0.08) !important;
+    color: white !important;
+    border-bottom-color: rgba(255,107,53,0.6) !important;
 }
 [data-testid="stSidebar"] div[data-testid="stButton"] > button p,
 [data-testid="stSidebar"] div[data-testid="stButton"] > button span {
-    color: white !important;
-    white-space: pre-wrap !important;
+    color: inherit !important;
     text-align: left !important;
+    font-size: inherit !important;
 }
 
 /* ── Boutons navigation bas de page ── */
@@ -1113,24 +1115,21 @@ with st.sidebar:
     st.markdown("**Lead Intelligence Platform v3.0**")
     st.markdown("---")
 
-    # Gros boutons de navigation
+    # Navigation — tabs épurés avec état actif visible
     for i, (pname, pnum, pdesc) in enumerate(PAGES):
         is_active = (i == st.session_state.page_idx)
-        # Affiche le label complet avec step et description
-        btn_label = "{} {}\n{}".format(pnum, pname, pdesc)
+        # Label : numéro + nom + indicateur actif
         if is_active:
-            st.markdown('<div style="background:#FF6B35;border-radius:10px;padding:12px 14px;margin:3px 0">'
-                '<div style="font-size:.7rem;color:rgba(255,255,255,.7);margin-bottom:2px">{} — {}</div>'
-                '<div style="font-size:.95rem;font-weight:700;color:white">{}</div>'
-                '</div>'.format(pnum, pdesc, pname), unsafe_allow_html=True)
-            if st.button(pname, key="nav_{}".format(i), use_container_width=True):
-                go_to(i); st.rerun()
+            label = "▸  {}   {}".format(pname, pnum)
         else:
-            st.markdown('<div style="border-radius:10px;margin:3px 0;border:1px solid rgba(255,255,255,.15)">'
-                '<div style="padding:2px 14px 0;font-size:.7rem;color:rgba(255,255,255,.5)">{} — {}</div>'
-                '</div>'.format(pnum, pdesc), unsafe_allow_html=True)
-            if st.button(pname, key="nav_{}".format(i), use_container_width=True):
-                go_to(i); st.rerun()
+            label = "      {}   {}".format(pname, pnum)
+        if st.button(label, key="nav_{}".format(i), use_container_width=True):
+            go_to(i); st.rerun()
+        if is_active:
+            # Injecte du CSS ciblant ce bouton précis pour le colorier
+            st.markdown(
+                "<style>[data-testid='stSidebar'] div[data-testid='stButton']:has(button[kind='secondary']:nth-of-type(1)) > button {{}}</style>",
+                unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("**Statut clés API**")
