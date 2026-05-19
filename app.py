@@ -172,49 +172,37 @@ div[data-testid="stButton"] > button span { color:white !important; }
 .stProgress > div > div { background:#FF6B35 !important; }
 div[data-testid="stTabs"] button { font-weight:600; }
 
-/* ── Onglets sidebar — tabs épurés ── */
+/* ── Sidebar nav — numéro + nom, dot actif ── */
 [data-testid="stSidebar"] div[data-testid="stButton"] > button {
-    background: transparent !important;
+    background: rgba(255,255,255,0.04) !important;
     border: none !important;
-    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
-    border-radius: 0 !important;
-    color: rgba(255,255,255,0.65) !important;
-    font-size: 0.92rem !important;
-    font-weight: 500 !important;
-    padding: 13px 6px !important;
-    margin: 0 !important;
+    border-radius: 8px !important;
+    color: rgba(255,255,255,0.6) !important;
+    font-size: 0.82rem !important;
+    font-weight: 400 !important;
+    padding: 9px 12px !important;
+    margin-bottom: 2px !important;
     text-align: left !important;
     width: 100% !important;
-    min-height: 50px !important;
+    min-height: 54px !important;
+    white-space: pre-line !important;
+    line-height: 1.5 !important;
     transition: all .15s !important;
     box-shadow: none !important;
 }
 [data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
-    background: rgba(255,255,255,0.08) !important;
+    background: rgba(255,255,255,0.1) !important;
     color: white !important;
-    border-bottom-color: rgba(255,107,53,0.6) !important;
 }
 [data-testid="stSidebar"] div[data-testid="stButton"] > button p,
 [data-testid="stSidebar"] div[data-testid="stButton"] > button span {
     color: inherit !important;
+    white-space: pre-line !important;
     text-align: left !important;
     font-size: inherit !important;
 }
 
-/* ── Boutons navigation bas de page ── */
-.page-nav {
-    display:flex; justify-content:space-between; align-items:center;
-    margin-top:2.5rem; padding-top:1.2rem;
-    border-top:1px solid #e2e8f0;
-}
-.page-nav-info { font-size:0.85rem; color:#94a3b8; font-weight:500; }
-div[data-testid="stButton"].nav-prev > button {
-    background:white !important; color:#003082 !important;
-    border:1.5px solid #003082 !important; font-weight:600 !important;
-}
-div[data-testid="stButton"].nav-prev > button:hover { background:#EFF6FF !important; }
-div[data-testid="stButton"].nav-prev > button p,
-div[data-testid="stButton"].nav-prev > button span { color:#003082 !important; }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -1115,21 +1103,13 @@ with st.sidebar:
     st.markdown("**Lead Intelligence Platform v3.0**")
     st.markdown("---")
 
-    # Navigation — tabs épurés avec état actif visible
+    # Navigation — numéro + nom sur deux lignes, pill active orange
     for i, (pname, pnum, pdesc) in enumerate(PAGES):
         is_active = (i == st.session_state.page_idx)
-        # Label : numéro + nom + indicateur actif
-        if is_active:
-            label = "▸  {}   {}".format(pname, pnum)
-        else:
-            label = "      {}   {}".format(pname, pnum)
+        dot = "●" if is_active else "○"
+        label = "{} {}  {}\n{}".format(dot, pnum, pdesc, pname)
         if st.button(label, key="nav_{}".format(i), use_container_width=True):
             go_to(i); st.rerun()
-        if is_active:
-            # Injecte du CSS ciblant ce bouton précis pour le colorier
-            st.markdown(
-                "<style>[data-testid='stSidebar'] div[data-testid='stButton']:has(button[kind='secondary']:nth-of-type(1)) > button {{}}</style>",
-                unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("**Statut clés API**")
@@ -1140,25 +1120,7 @@ with st.sidebar:
 
 page = PAGE_NAMES[st.session_state.page_idx]
 
-# ── Helper : boutons nav bas de page ─────────────────────────────
-def nav_buttons(current_idx):
-    st.markdown("---")
-    cols = st.columns([1, 2, 1])
-    with cols[0]:
-        if current_idx > 0:
-            st.markdown('<div class="nav-prev">', unsafe_allow_html=True)
-            if st.button("← " + PAGE_NAMES[current_idx - 1], key="prev_{}".format(current_idx), use_container_width=True):
-                go_to(current_idx - 1)
-                st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-    with cols[1]:
-        st.markdown('<p style="text-align:center;color:#94a3b8;font-size:.85rem;margin-top:.6rem">Page {} / {}</p>'.format(
-            current_idx + 1, len(PAGES)), unsafe_allow_html=True)
-    with cols[2]:
-        if current_idx < len(PAGES) - 1:
-            if st.button(PAGE_NAMES[current_idx + 1] + " →", key="next_{}".format(current_idx), use_container_width=True):
-                go_to(current_idx + 1)
-                st.rerun()
+
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -1255,7 +1217,6 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 2 : PROSPECTION FROM SCRATCH ────────────────────────
     # ══════════════════════════════════════════════════════════════
-        nav_buttons(0)
 
     elif "Prospection From Scratch" in page:
         st.markdown("""<div class="main-header">
@@ -1297,28 +1258,33 @@ try:
             if df_prosp.empty:
                 st.warning("Aucun prospect trouve avec ces criteres. Elargissez la recherche.")
             else:
-                st.success("{:,} prospects trouvés ✅".format(len(df_prosp)))
-                c1,c2,c3,c4 = st.columns(4)
-                with c1: st.markdown('<div class="metric-card"><div class="metric-value">{:,}</div><div class="metric-label">Prospects</div></div>'.format(len(df_prosp)), unsafe_allow_html=True)
-                with c2: st.markdown('<div class="metric-card green"><div class="metric-value">{}</div><div class="metric-label">Secteurs NAF</div></div>'.format(df_prosp["Industry Code"].nunique()), unsafe_allow_html=True)
-                with c3: st.markdown('<div class="metric-card orange"><div class="metric-value">{:.0f}</div><div class="metric-label">Moy. établissements</div></div>'.format(pd.to_numeric(df_prosp["Nb Etablissements"],errors="coerce").mean()), unsafe_allow_html=True)
-                _nb = pd.to_numeric(df_prosp["Nb Etablissements"],errors="coerce")
-                with c4: st.markdown('<div class="metric-card"><div class="metric-value">{:,}</div><div class="metric-label">Total établissements</div></div>'.format(int(_nb.sum())), unsafe_allow_html=True)
-                st.dataframe(df_prosp, use_container_width=True, height=420)
-                st.session_state.df_prospects = df_prosp
-                col_d1, col_d2 = st.columns(2)
-                with col_d1:
-                    st.download_button("Telecharger la liste (.xlsx)", data=to_excel(df_prosp),
-                        file_name="prospects_sirene_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True)
-                with col_d2:
-                    st.info("Les prospects sont sauvegardés en session → allez sur **Scoring & Top 100** pour les noter.")
+                st.session_state.df_prospects = df_prosp  # ← sauvegarde immédiate
+
+        # Affiche les résultats depuis session_state (persistant entre les pages)
+        if st.session_state.df_prospects is not None:
+            df_prosp = st.session_state.df_prospects
+            st.success("{:,} prospects en mémoire ✅".format(len(df_prosp)))
+            c1,c2,c3,c4 = st.columns(4)
+            with c1: st.markdown('<div class="metric-card"><div class="metric-value">{:,}</div><div class="metric-label">Prospects</div></div>'.format(len(df_prosp)), unsafe_allow_html=True)
+            with c2: st.markdown('<div class="metric-card green"><div class="metric-value">{}</div><div class="metric-label">Secteurs NAF</div></div>'.format(df_prosp["Industry Code"].nunique()), unsafe_allow_html=True)
+            with c3: st.markdown('<div class="metric-card orange"><div class="metric-value">{:.0f}</div><div class="metric-label">Moy. établissements</div></div>'.format(pd.to_numeric(df_prosp["Nb Etablissements"],errors="coerce").mean()), unsafe_allow_html=True)
+            _nb = pd.to_numeric(df_prosp["Nb Etablissements"],errors="coerce")
+            with c4: st.markdown('<div class="metric-card"><div class="metric-value">{:,}</div><div class="metric-label">Total établissements</div></div>'.format(int(_nb.sum())), unsafe_allow_html=True)
+            st.dataframe(df_prosp, use_container_width=True, height=420)
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.download_button("Telecharger la liste (.xlsx)", data=to_excel(df_prosp),
+                    file_name="prospects_sirene_{}.xlsx".format(datetime.now().strftime("%Y%m%d")),
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True)
+            with col_d2:
+                if st.button("Effacer la liste", key="clear_prosp"):
+                    st.session_state.df_prospects = None
+                    st.rerun()
 
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 3 : SCORING & TOP 100 ────────────────────────────────
     # ══════════════════════════════════════════════════════════════
-        nav_buttons(1)
 
     elif "Scoring & Top 100" in page:
         st.markdown("""<div class="main-header">
@@ -1462,7 +1428,6 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 4 : DASHBOARD TERRITOIRE ────────────────────────────
     # ══════════════════════════════════════════════════════════════
-        nav_buttons(2)
 
     elif "Dashboard Territoire" in page:
         st.markdown("""<div class="main-header">
@@ -1589,7 +1554,6 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 5 : GÉNÉRATEUR DE PITCH IA ──────────────────────────
     # ══════════════════════════════════════════════════════════════
-        nav_buttons(3)
 
     elif "Generateur de Pitch" in page:
         st.markdown("""<div class="main-header">
@@ -1721,7 +1685,6 @@ try:
     # ══════════════════════════════════════════════════════════════
     # ── PAGE 6 : ANALYSE BUSINESS (Mode Consultant McKinsey) ──────
     # ══════════════════════════════════════════════════════════════
-        nav_buttons(4)
 
     elif "Analyse Business" in page:
         st.markdown("""<div class="main-header">
@@ -1883,7 +1846,6 @@ Les comptes orphelins Grade A/B représentent une opportunité de réallocation 
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True)
 
-        nav_buttons(5)
 
 except Exception as _page_err:
     import traceback
