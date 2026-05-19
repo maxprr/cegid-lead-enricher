@@ -176,48 +176,41 @@ div[data-testid="stTabs"] button { font-weight:600; }
 
 # ══════════════════════════════════════════════════════════════════
 # 1. CHARGEMENT CLÉS API
+# Même logique que cegid_lead_intelligence.py original :
+# anthropic.Anthropic() lit ANTHROPIC_API_KEY automatiquement via os.environ
+# On s'assure juste qu'elle y est en la copiant depuis st.secrets si besoin
 # ══════════════════════════════════════════════════════════════════
 
-def load_keys():
-    keys = {}
-    # 1. Fichier .env local
-    env_path = Path(__file__).parent / ".env"
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, _, v = line.partition("=")
-                keys[k.strip()] = v.strip()
-    # 2. Variables d'environnement système (Streamlit Cloud les injecte aussi)
-    for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY", "ANTHROPIC_API_KEY"]:
-        env_val = os.environ.get(k, "")
-        if env_val:
-            keys[k] = env_val
-    # 3. st.secrets (prioritaire — Streamlit Cloud Secrets)
-    # Chaque clé est lue individuellement avec try/except pour éviter
-    # que l'absence d'une clé ne bloque les autres
-    for k in ["PAPPERS_API_KEY", "GOOGLE_MAPS_API_KEY", "SERPAPI_KEY", "ANTHROPIC_API_KEY"]:
-        try:
-            val = st.secrets[k]
-            if val:
-                keys[k] = str(val)
-        except Exception:
-            pass
-    return keys
+def _get_secret(key):
+    """Lit une clé : st.secrets en priorité, puis os.environ, puis .env local."""
+    try:
+        val = st.secrets[key]
+        if val: return str(val)
+    except Exception:
+        pass
+    val = os.environ.get(key, "")
+    if val: return val
+    try:
+        env_path = Path(__file__).parent / ".env"
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, _, v = line.partition("=")
+                    if k.strip() == key: return v.strip()
+    except Exception:
+        pass
+    return ""
 
-def is_streamlit_cloud():
-    return (
-        os.environ.get("STREAMLIT_SHARING_MODE") == "1"
-        or os.environ.get("HOME", "").startswith("/home/adminuser")
-        or "/mount/src/" in str(Path(__file__))
-    )
+PAPPERS_KEY = _get_secret("PAPPERS_API_KEY")
+GMAPS_KEY   = _get_secret("GOOGLE_MAPS_API_KEY")
+SERPAPI_KEY = _get_secret("SERPAPI_KEY")
 
-_KEYS          = load_keys()
-PAPPERS_KEY    = _KEYS.get("PAPPERS_API_KEY", "")
-GMAPS_KEY      = _KEYS.get("GOOGLE_MAPS_API_KEY", "")
-SERPAPI_KEY    = _KEYS.get("SERPAPI_KEY", "")
-ANTHROPIC_KEY  = _KEYS.get("ANTHROPIC_API_KEY", os.environ.get("ANTHROPIC_API_KEY", ""))
-ON_CLOUD       = is_streamlit_cloud()
+# Pour anthropic : on injecte dans os.environ pour que anthropic.Anthropic()
+# la trouve automatiquement, exactement comme dans le fichier original
+_anthr = _get_secret("ANTHROPIC_API_KEY")
+if _anthr:
+    os.environ["ANTHROPIC_API_KEY"] = _anthr
 
 # ══════════════════════════════════════════════════════════════════
 # 2. CONSTANTES MÉTIER
@@ -1011,8 +1004,6 @@ Règles :
 - Questions : ouvertes, stratégiques, pour qualifier le projet {product}
 - Ton adapté au {persona_label}
 """
-    if ANTHROPIC_KEY:
-        os.environ["ANTHROPIC_API_KEY"] = ANTHROPIC_KEY
     client  = anthropic.Anthropic()
     message = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -1075,7 +1066,7 @@ with st.sidebar:
     st.markdown("{} Pappers {}".format("✅" if PAPPERS_KEY else "❌","(active)" if PAPPERS_KEY else "(absente)"))
     st.markdown("{} Google Maps {}".format("✅" if GMAPS_KEY else "⚠️","(active)" if GMAPS_KEY else "(optionnel)"))
     st.markdown("{} SerpApi {}".format("✅" if SERPAPI_KEY else "⚠️","(active)" if SERPAPI_KEY else "(optionnel)"))
-    st.markdown("{} Anthropic/Claude {}".format("✅" if ANTHROPIC_KEY else "❌","(active)" if ANTHROPIC_KEY else "(requise p.5)"))
+    st.markdown("{} Anthropic/Claude {}".format("✅" if os.environ.get("ANTHROPIC_API_KEY") else "❌","(active)" if os.environ.get("ANTHROPIC_API_KEY") else "(requise p.5)"))
     st.markdown("---")
     st.markdown("**Sources enrichissement**")
     st.markdown("""
@@ -1425,7 +1416,7 @@ try:
             if map_view == "Par region (France)":
                 reg_col = next((c for c in ["Region","Billing State/Province (text only)","Billing State/Province"] if c in df_map.columns), None)
                 if reg_col:
-                    df_france = df_map[df_map.get("Billing Country","France") == "France"].copy() if "Billing Country" in df_map.columns else df_map.copy()
+                    df_france = df_map[df_map["Billing Country"] == "France"].copy() if "Billing Country" in df_map.columns else df_map.copy()
                     df_france["_region"] = df_france[reg_col].fillna("Non renseignee")
                     region_agg = df_france.groupby("_region").agg(
                         nb_comptes     =("Account Name","count"),
@@ -1436,13 +1427,25 @@ try:
                     region_agg["lat"] = region_agg["_region"].map(lambda r: REGIONS_COORDS.get(r,(46.5,2.5))[0])
                     region_agg["lon"] = region_agg["_region"].map(lambda r: REGIONS_COORDS.get(r,(46.5,2.5))[1])
                     region_agg["pct_orphelins"] = (region_agg["nb_orphelins"] / region_agg["nb_comptes"] * 100).round(0)
-                    fig_map = px.scatter_mapbox(region_agg, lat="lat", lon="lon",
+                    # px.scatter_geo : ne nécessite aucun token Mapbox, fonctionne partout
+                    fig_map = px.scatter_geo(
+                        region_agg, lat="lat", lon="lon",
                         size="nb_comptes", color="grade_dominant",
                         color_discrete_map=GRADE_COLORS,
                         hover_name="_region",
                         hover_data={"nb_comptes":True,"score_moyen":":.1f","pct_orphelins":True,"lat":False,"lon":False},
-                        size_max=60, zoom=4.5, center={"lat":46.5,"lon":2.5},
-                        mapbox_style="open-street-map", title="Carte Prospects — Par Région")
+                        size_max=40,
+                        title="Carte Prospects — Par Région")
+                    fig_map.update_geos(
+                        scope="europe",
+                        center={"lat":46.5,"lon":2.5},
+                        projection_scale=4,
+                        showland=True, landcolor="#f0f0f0",
+                        showcoastlines=True, coastlinecolor="#aaaaaa",
+                        showborder=True, bordercolor="#888888",
+                        showframe=False,
+                        bgcolor="white",
+                    )
                 else:
                     st.warning("Colonne Region introuvable dans le fichier. Utilisez la vue Par pays.")
                     map_view = "Par pays"
@@ -1459,18 +1462,28 @@ try:
                     pays_agg["lat"] = pays_agg[pays_col].map(lambda p: PAYS_COORDS.get(p,(48.0,2.0))[0])
                     pays_agg["lon"] = pays_agg[pays_col].map(lambda p: PAYS_COORDS.get(p,(48.0,2.0))[1])
                     pays_agg["pct_orphelins"] = (pays_agg["nb_orphelins"] / pays_agg["nb_comptes"] * 100).round(0)
-                    fig_map = px.scatter_mapbox(pays_agg, lat="lat", lon="lon",
+                    fig_map = px.scatter_geo(
+                        pays_agg, lat="lat", lon="lon",
                         size="nb_comptes", color="grade_dominant",
                         color_discrete_map=GRADE_COLORS,
                         hover_name=pays_col,
                         hover_data={"nb_comptes":True,"score_moyen":":.1f","pct_orphelins":True,"lat":False,"lon":False},
-                        size_max=80, zoom=4,
+                        size_max=50,
+                        title="Carte Prospects — Par Pays")
+                    fig_map.update_geos(
+                        scope="europe",
                         center={"lat":47.0,"lon":5.0},
-                        mapbox_style="open-street-map", title="Carte Prospects — Par Pays")
+                        projection_scale=3,
+                        showland=True, landcolor="#f0f0f0",
+                        showcoastlines=True, coastlinecolor="#aaaaaa",
+                        showborder=True, bordercolor="#888888",
+                        showframe=False,
+                        bgcolor="white",
+                    )
                 else:
                     st.warning("Colonne Billing Country introuvable."); st.stop()
 
-            fig_map.update_layout(height=560, margin=dict(t=40,b=0,l=0,r=0))
+            fig_map.update_layout(height=560, margin=dict(t=40,b=0,l=0,r=0), paper_bgcolor="white")
             st.plotly_chart(fig_map, use_container_width=True)
 
             # Tableau stats
@@ -1496,7 +1509,7 @@ try:
             <p>Kit de prospection personnalisé · Email J1 · InMail · Pitch 30s · Questions découverte · Powered by Claude</p>
         </div>""", unsafe_allow_html=True)
 
-        if not ANTHROPIC_KEY:
+        if not os.environ.get("ANTHROPIC_API_KEY"):
             st.markdown('<div class="warn-box">Clé Anthropic absente → ajoutez <code>ANTHROPIC_API_KEY=votre_cle</code> dans <code>.env</code> ou dans Streamlit Secrets.</div>', unsafe_allow_html=True)
 
         df_pitch_src = st.session_state.df_scored
@@ -1556,7 +1569,7 @@ try:
                 st.markdown("---")
 
                 if generate_btn:
-                    if not ANTHROPIC_KEY:
+                    if not os.environ.get("ANTHROPIC_API_KEY"):
                         st.error("Clé Anthropic non configurée — impossible de générer le kit.")
                     else:
                         with st.spinner("Génération du kit pour {}...".format(selected_account)):
