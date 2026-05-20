@@ -1074,8 +1074,23 @@ def to_excel(df):
 # 9. SESSION STATE
 # ══════════════════════════════════════════════════════════════════
 
-if "df_prospects" not in st.session_state: st.session_state.df_prospects = None
-if "df_scored"    not in st.session_state: st.session_state.df_scored    = None
+# ── Session state — persistance complète entre les pages ────────
+_defaults = {
+    "df_prospects":    None,   # prospects scrappés / enrichis
+    "df_scored":       None,   # base scorée
+    "df_enrichi":      None,   # résultat enrichissement P1
+    "df_enrichi_raw":  None,   # fichier original uploadé P1
+    "pct_av":          None,   # complétude avant enrichissement
+    "enrich_filename": None,   # nom du fichier uploadé P1
+    "naf_sel":         ["4771Z","4772A","4777Z","4775Z","4778A"],  # filtres P2
+    "region_sel":      "Ile-de-France",
+    "min_etab":        5,
+    "max_res":         100,
+    "crm_filename":    None,   # nom fichier CRM scoré P3
+}
+for _k, _v in _defaults.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
 # ══════════════════════════════════════════════════════════════════
 # 10. SIDEBAR
@@ -1143,13 +1158,21 @@ try:
 
         uploaded = st.file_uploader("Deposez votre fichier Excel ou CSV", type=["xlsx","xls","csv"])
 
-        if uploaded:
+        # Charge et sauvegarde en session dès l'upload
+        if uploaded and uploaded.name != st.session_state.get("enrich_filename"):
             try:
                 df_in = pd.read_csv(uploaded, sep=None, engine="python") if uploaded.name.endswith(".csv") else pd.read_excel(uploaded)
+                st.session_state.df_enrichi_raw  = df_in
+                st.session_state.df_enrichi      = None  # reset résultat précédent
+                st.session_state.enrich_filename = uploaded.name
+                st.session_state.pct_av          = (1 - df_in.isna().mean().mean()) * 100
             except Exception as e:
                 st.error("Erreur chargement : {}".format(e)); st.stop()
 
-            pct_av = (1 - df_in.isna().mean().mean()) * 100
+        # Affiche depuis session_state si fichier déjà chargé
+        if st.session_state.df_enrichi_raw is not None:
+            df_in  = st.session_state.df_enrichi_raw
+            pct_av = st.session_state.pct_av
             c1,c2,c3,c4 = st.columns(4)
             with c1: st.markdown('<div class="metric-card"><div class="metric-value">{:,}</div><div class="metric-label">Lignes total</div></div>'.format(len(df_in)), unsafe_allow_html=True)
             with c2: st.markdown('<div class="metric-card green"><div class="metric-value">{:.0f}%</div><div class="metric-label">Completude actuelle</div></div>'.format(pct_av), unsafe_allow_html=True)
@@ -1201,13 +1224,24 @@ try:
                 df_display = df_out.replace("None","").replace("nan","")
                 st.markdown('<div class="section-title">Resultats enrichis</div>', unsafe_allow_html=True)
                 st.dataframe(df_display, use_container_width=True, height=380)
+                st.session_state.df_enrichi   = df_display
                 st.session_state.df_prospects = df_display
                 st.download_button("Telecharger le fichier enrichi (.xlsx)",
                     data=to_excel(df_display),
                     file_name="leads_enrichis_{}.xlsx".format(datetime.now().strftime("%Y%m%d_%H%M")),
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     use_container_width=True)
-        else:
+        # Afficher résultat enrichi persisté
+        if st.session_state.df_enrichi is not None:
+            df_display = st.session_state.df_enrichi
+            st.success("Fichier enrichi disponible — {} lignes ✅".format(len(df_display)))
+            st.dataframe(df_display, use_container_width=True, height=300)
+            st.download_button("Télécharger le fichier enrichi (.xlsx)",
+                data=to_excel(df_display),
+                file_name="leads_enrichis_{}.xlsx".format(datetime.now().strftime("%Y%m%d_%H%M")),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True)
+        elif not (st.session_state.df_enrichi_raw is not None):
             st.markdown("""<div style="text-align:center;padding:3rem;background:white;border-radius:12px;border:2px dashed #cbd5e1;margin-top:1rem">
                 <div style="font-size:3rem">📂</div>
                 <h3 style="color:#64748b;font-weight:600">Deposez votre fichier ici</h3>
@@ -1228,14 +1262,19 @@ try:
         col1, col2, col3 = st.columns([2,2,1])
         with col1:
             naf_sel = st.multiselect("Codes NAF (secteurs retail)", list(NAF_RETAIL.keys()),
-                default=["4771Z","4772A","4777Z","4775Z","4778A"],
+                default=st.session_state.naf_sel,
                 format_func=lambda x: "{} — {}".format(x, NAF_RETAIL[x]))
+            st.session_state.naf_sel = naf_sel
         with col2:
-            region_sel = st.selectbox("Region", ["Toutes les regions"] + REGIONS_FR, index=7)
+            region_idx = (["Toutes les regions"] + REGIONS_FR).index(st.session_state.region_sel) if st.session_state.region_sel in (["Toutes les regions"] + REGIONS_FR) else 7
+            region_sel = st.selectbox("Region", ["Toutes les regions"] + REGIONS_FR, index=region_idx)
+            st.session_state.region_sel = region_sel
         with col3:
-            max_res  = st.number_input("Nb max", 5, 500, 100)
-            min_etab = st.number_input("Nb min etab.", 1, 50, 5,
+            max_res  = st.number_input("Nb max", 5, 500, int(st.session_state.max_res))
+            st.session_state.max_res = max_res
+            min_etab = st.number_input("Nb min etab.", 1, 50, int(st.session_state.min_etab),
                 help="5+ etablissements = enseigne avec réseau de magasins actif")
+            st.session_state.min_etab = min_etab
 
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
@@ -1323,7 +1362,8 @@ try:
 
         elif "CRM" in tab_source:
             up_crm = st.file_uploader("Uploadez votre base CRM (Prospects & EX Customer)", type=["xlsx","xls","csv"])
-            if up_crm:
+            if up_crm and (up_crm.name != st.session_state.get("crm_filename") or st.session_state.df_scored is None):
+                st.session_state.crm_filename = up_crm.name
                 with st.spinner("Chargement et pré-traitement CRM..."):
                     df_to_score = load_and_score_crm(up_crm.read(), up_crm.name)
                     st.session_state.df_scored = df_to_score
@@ -1340,7 +1380,7 @@ try:
 
         if st.session_state.df_scored is not None:
             df_s    = st.session_state.df_scored
-            top_n   = st.slider("Afficher le Top", 10, min(200,len(df_s)), min(100,len(df_s)), key="top_n_s3")
+            top_n   = st.slider("Afficher le Top", 10, 200, min(100,len(df_s)), key="top_n_s3")
             df_top  = df_s.head(top_n)
             n_a = (df_s["Grade"]=="A").sum(); n_b = (df_s["Grade"]=="B").sum()
             n_c = (df_s["Grade"]=="C").sum(); n_d = (df_s["Grade"]=="D").sum()
